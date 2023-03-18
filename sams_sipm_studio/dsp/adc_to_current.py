@@ -1,22 +1,7 @@
-import os, sys, h5py, json, time
-import pandas as pd
+"""
+Processors for converting DAQ captured waveforms to current waveforms using known gains and impedances
+"""
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
-from scipy.stats import linregress
-from uncertainties import ufloat, unumpy
-import warnings
-warnings.filterwarnings('ignore')
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-from tqdm import tqdm
-tqdm.pandas() # suppress annoying FutureWarning
-import random
-from scipy.signal import find_peaks
-import numba
-import time
-import scipy.signal as signal 
-
 
 ### Create a harcoded dictionary of physical hardware settings to let the user select from
 setting_dict = {
@@ -51,25 +36,28 @@ setting_dict = {
 }
 
 class pc: 
-    def voltage_divider(R1, R2):
+    """
+    Class that defines circuit components and their amplification
+    """
+    def voltage_divider(R1: float, R2: float) -> float:
         return (R2 / (R1 + R2))
 
 
-    def trans_amp(R1):
+    def trans_amp(R1: float) -> float:
         return - R1
 
 
-    def non_invert_amp(R1, R2):
+    def non_invert_amp(R1: float, R2: float) -> float:
         return (1 + (R1 / R2))
 
 
-    def invert_amp(R1, R2):
+    def invert_amp(R1: float, R2: float) -> float:
         return - R1 / R2
 
-
-# ## create function to compute the amplification of a specific hardware configuration
-
-def _compute_amplification(settings, channel):
+def _compute_amplification(settings: dict, channel: str) -> float:
+    """
+    Compute the amplification for a specific hardware configuration. 
+    """
     full_amp = 1
     for i, func in enumerate(settings["amplifier"][channel]["functions"]):
         amp_func = getattr(pc, func)
@@ -82,8 +70,14 @@ sipm_amp_1st_stage = _compute_amplification(setting_dict, "sipm_1st")
 sipm_amp_1st_stage_low_gain = _compute_amplification(setting_dict, "sipm_1st_low_gain")
 sipm_amp_low_gain = _compute_amplification(setting_dict, "sipm_low_gain")
 
-# ## create funciton that uses the above amplifications to convert to current 
 
-def current_converter(waveforms, vpp=2, n_bits=14, device="sipm"):
+def current_converter(waveforms: np.array, vpp: float= 2, n_bits: int= 14, device: str= "sipm") -> np.array:
+    r"""
+    Convert a DAQ ADC waveform to current using the amplification associated with the hardware configuration. 
+
+    1. Convert the ADC (least significant bit, lsb) to voltage  $ADC \cdot \frac{v_{pp}}{2^{n_bits}}$ 
+        The CAEN DAQ splits the volage dynamic range (v_pp) into a binary number with n_bits of precision
+    2. Convert the voltage to current using the amplification/impedance of the hardware for the device: $V / Amp [A/V]$
+    """
     amp = _compute_amplification(setting_dict, device)
     return waveforms * (vpp / 2 ** n_bits) * (1 / amp)

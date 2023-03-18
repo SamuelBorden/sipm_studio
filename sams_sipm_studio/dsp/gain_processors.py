@@ -1,27 +1,29 @@
-import os, sys, h5py, json, time
-import pandas as pd
+"""
+Processors to calculate gain from a SiPM charge histogram
+"""
+
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 from scipy.stats import linregress
 from uncertainties import ufloat, unumpy
-import warnings
-warnings.filterwarnings('ignore')
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-from tqdm import tqdm
-tqdm.pandas() # suppress annoying FutureWarning
-import random
-from scipy.signal import find_peaks
-import numba
-import time
-import scipy.signal as signal 
-from uncertainties import ufloat
 from uncertainties.umath import *
 
+# define physical constants
 e_charge = 1.6e-19
 
-def normalize_charge(charges, peak_locs, peak_errors):
+
+def normalize_charge(charges: np.array, peak_locs: np.array, peak_errors: np.array) -> tuple(float, np.array, float):
+    """
+    Given an array of charges, return the gain, normalized charges, or, number of photoelectrons, and the gain error
+
+    Parameters 
+    ----------
+    charges 
+        Array of SiPM charges, in Coulombs
+    peak_locs 
+        The locations of photoelectron peaks in the charge histogram 
+    peak_errors 
+        The errors associated with the peak locations 
+    """
     x0 = peak_locs[0]
     peak_locs = np.array(peak_locs)[1:]
     
@@ -50,7 +52,17 @@ def normalize_charge(charges, peak_locs, peak_errors):
     return gain/e_charge, (charges - x0) / gain, gain_e/e_charge
 
 
-def my_gain(peak_locs, peak_err):
+def my_gain(peak_locs: np.array, peak_err: np.array) -> np.array:
+    """
+    The differs from :func:`normalize_charge` by not subtracting the pedestal; it only takes the differences of all peaks found into account 
+
+    Parameters 
+    ----------
+    peak_locs 
+        The locations of photoelectron peaks in the charge histogram 
+    peak_errors 
+        The errors associated with the peak locations 
+    """
     
     peak_locs_u = []
     for i in range(len(peak_locs)):
@@ -63,11 +75,23 @@ def my_gain(peak_locs, peak_err):
     return np.array([gain_u.n/e_charge,gain_u.s/e_charge])
 
 
-from scipy.stats import linregress
-def line(x, m, b):
+def line(x: np.array, m: float, b: float) -> np.array:
+    """
+    Return a line, used to fit the peak locations from a charge histogram
+    """
     return m*x+b
 
-def slope_fit_gain(peak_locs, pedestal = False):
+def slope_fit_gain(peak_locs: np.array, pedestal: bool = False) -> np.array:
+    """
+    Returns the gain by fitting a line to the peak locations from a charge histogram and returning its slope
+
+    Parameters
+    ----------
+    peak_locs 
+        The locations of photoelectron peaks in the charge histogram 
+    pedestal 
+        Set to true if there is a pesestal recorded in the charge spectrum
+    """
     if pedestal:
         npe = np.arange(0, len(peak_locs))
     else: 
