@@ -1,6 +1,6 @@
 name: sipm_studio
 
-on:   
+on:
   push:
     branches:
       - main

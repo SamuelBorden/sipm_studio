@@ -12,7 +12,7 @@
 #$ -cwd                              # execute from the current working directory
 #$ -t 1                              # give me N identical jobs, labelled by variable SGE_TASK_ID
 #$ -l scratch=10G                    # Give me 10 gigs of data in scratch
-#$ -pe smp 5                        # Give me fifteen processors on this node 
+#$ -pe smp 5                        # Give me fifteen processors on this node
 
 #execute the $SGE_TASK_ID'th sub-job
 set -x # I think this makes everything beyond this call get saved to the log

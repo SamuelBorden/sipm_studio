@@ -1,4 +1,5 @@
 import pytest
 
+
 def test_calculate_light():
-    assert 1==1
+    assert 1 == 1
