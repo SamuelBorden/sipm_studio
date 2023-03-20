@@ -1,22 +1,11 @@
-import glob 
-import os, sys, h5py, json, time
-import pandas as pd
+import os, h5py, json
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
-from scipy.stats import linregress
 from uncertainties import ufloat, unumpy
 import warnings
 warnings.filterwarnings('ignore')
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
-from tqdm import tqdm
-tqdm.pandas() # suppress annoying FutureWarning
-import random
-from scipy.signal import find_peaks
-import numba
-import time
-import scipy.signal as signal 
 
 from sams_sipm_studio.dsp.adc_to_current import current_converter
 from sams_sipm_studio.dsp.qpe_peak_finding import fit_peaks, guess_peaks, gaussian
@@ -25,6 +14,8 @@ from sams_sipm_studio.dsp.gain_processors import normalize_charge, my_gain, slop
 
 import argparse 
 
+## Create some parser arguments for when the pool process is called. 
+
 # parser = argparse.ArgumentParser(description='Calculate gain of SiPMs')
 # parser.add_argument('-c', '--core_num', help='number of cores to distribute files over', type=int, default=1)
 # parser.add_argument('-f', '--file', help='json spec file', type=str, default="/home/sjborden/sams_sipm_studio/examples/default_gain.json")
@@ -32,6 +23,8 @@ import argparse
 # args = parser.parse_args()
 # num_processors = int(args.core_num)
 # json_file_path = str(args.file)
+
+# Define some global parameters used to automatically clean the data, and detect and fit peaks.
 
 STD_FIT_WIDTH = 100 # number of bins to fit a gaussian to a std histogram 
 SAMPLE_TIME = 2e-9 # convert the DT5730 sampling rate to seconds
@@ -44,13 +37,35 @@ SIGMA_DISTANCE = 5 # number of standard deviations to set as the minimum distanc
 SIGMA_WIDTH = 2 # the number of sigma for minimum peak width in QPE peak finding
 
 
-def calculate_gain(input_file, bias, device_name, vpp, start_idx, end_idx, output_file):
+def calculate_gain(input_file: str, bias: float, device_name: str, vpp: float, start_idx: int, end_idx: int, output_file: str) -> None:
     """
     For a given file, read in the waveforms and convert them to current waveforms. Then, integrate the waveforms. 
     Apply a peak finding routine to the charge spectrum. Then calculate the gain with a number of calculators. Save the results. 
     
     The peak finding routine works like this: first, find and fit only the tallest peak in the QPE. Use its fit sigma to set 
     the minimum width of peaks to look for in the QPE, and use 3 times the std to set the inter-peak spacing in the search.
+
+    Parameters 
+    ----------
+    input_file 
+        A raw-tier CoMPASS file that contains `raw/waveforms` and `raw/baselines` as keys 
+    bias 
+        The bias the SiPM was set at during the run
+    device_name 
+        The name of the device this file corresponds to, one of:
+        `sipm`, `sipm_1st`, `sipm_1st_low_gain`, or `apd`
+    vpp 
+        The voltage division CoMPASS was set to record the DAC at 
+    start_idx 
+        The start of the trigger set to capture the SiPM pulses, in samples 
+    end_idx
+        The sample index of where 90% of a SiPM pulse as recovered to baseline 
+    output_file 
+        The name of the file in which to place the output of the calculated gains
+
+    Notes 
+    -----
+    The inputs of this function are all determined by :func:`.util.parse_json_config.parse_gain_json`
     """
     # Grab the output path from the filename 
     out_path = "/" + os.path.join(*output_file.split("/")[:-1])

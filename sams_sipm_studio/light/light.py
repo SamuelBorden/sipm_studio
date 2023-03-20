@@ -1,22 +1,11 @@
-import glob 
-import os, sys, h5py, json, time
-import pandas as pd
+import os, h5py, json
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
-from scipy.stats import linregress
 from uncertainties import ufloat, unumpy
 import warnings
 warnings.filterwarnings('ignore')
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
-from tqdm import tqdm
-tqdm.pandas() # suppress annoying FutureWarning
-import random
-from scipy.signal import find_peaks
-import numba
-import time
-import scipy.signal as signal 
 
 from sams_sipm_studio.dsp.adc_to_current import current_converter
 from sams_sipm_studio.dsp.qpe_peak_finding import fit_peaks, gaussian, guess_peaks_no_width , fit_peak
@@ -26,6 +15,8 @@ from sams_sipm_studio.dsp.charge_to_photons import sipm_photons, apd_photons
 
 import argparse 
 
+## Set up parser arguments so that the multiprocessing pool can receive everything correctly
+
 # parser = argparse.ArgumentParser(description='Calculate gain of SiPMs')
 # parser.add_argument('-c', '--core_num', help='number of cores to distribute files over', type=int, default=1)
 # parser.add_argument('-f', '--file', help='json spec file', type=str, default="/home/sjborden/sams_sipm_studio/examples/default_gain.json")
@@ -34,21 +25,51 @@ import argparse
 # num_processors = int(args.core_num)
 # json_file_path = str(args.file)
 
+
+# Set up some global variables so that automatic Gaussian fitting can work properly 
+
 STD_FIT_WIDTH = 100 # number of bins to fit a gaussian to a std histogram 
 SAMPLE_TIME = 2e-9 # convert the DT5730 sampling rate to seconds
 BL_START_IDX = 4000 
 BL_END_IDX = 4250 # index to start and stop calculating mean values for the baseline 
-LIGHT_QPE_HEIGHT = 30
+LIGHT_QPE_HEIGHT = 30 # Minimum height in counts to idnetify a peak in the QPE spectrum 
 DARK_QPE_HEIGHT = 40
 
 
-def calculate_light(input_file, bias, device_name, vpp, gain_file, light_window_start_idx, light_window_end_idx, dark_window_start_idx, dark_window_end_idx, output_file):
+def calculate_light(input_file: str, bias: float, device_name: str, vpp: float, gain_file: str, light_window_start_idx: int, light_window_end_idx: int, dark_window_start_idx: int, dark_window_end_idx: int, output_file: str) -> None:
     """
     For a given file, read in the waveforms and convert them to current waveforms. Then, integrate the waveforms. 
-    Apply a peak finding routine to the charge spectrum. Then calculate the gain with a number of calculators. Save the results. 
+    Apply a peak finding routine to the charge spectrum. Convert the median charge and its error to number of photons;
+    either use the gain of the SiPM as calculated earlier in the analysis chain, or use the known resposivity of the APD. 
     
-    The peak finding routine works like this: first, find and fit only the tallest peak in the QPE. Use its fit sigma to set 
-    the minimum width of peaks to look for in the QPE, and use 3 times the std to set the inter-peak spacing in the search.
+    Parameters 
+    ----------
+    input_file 
+        A raw-tier CoMPASS file that contains `raw/waveforms` and `raw/baselines` as keys 
+    bias 
+        The bias the SiPM was set at during the run
+    device_name 
+        The name of the device this file corresponds to, one of:
+        `sipm`, `sipm_1st`, `sipm_1st_low_gain`, or `apd`
+    vpp 
+        The voltage division CoMPASS was set to record the DAC at 
+    gain_file 
+        A file created earlier in the analysis chain that contains the calculated gain of the SiPM
+    light_window_start_idx 
+        The start of the trigger set to capture the triggered-on illuminated SiPM/APD pulses, in samples 
+    light_window_end_idx
+        The end of the trigger set to capture the triggered-on illuminated SiPM/APD pulses, in samples
+    dark_window_start_idx
+        The index at which to start integrating a current waveform under dark conditions -- must be suitably far away from the triggered light pulse 
+    dark_window_end_idx
+        The index at which to end integrating a current waveform under dark conditions -- the window must be the same width as the light window for error free analysis
+    output_file 
+        The name of the file in which to place the output of the calculated photon rates
+
+    Notes 
+    -----
+    The inputs of this function are all determined by :func:`.util.parse_json_config.parse_light_json`
+    The `light_window_start_idx` is determined by the `pretrigger` parameter set in CoMPASS, and the `light_window_end_idx` is determined by the width of the LED pulse
     """
     # Grab the output path from the filename 
     out_path = "/" + os.path.join(*output_file.split("/")[:-1])
@@ -61,7 +82,6 @@ def calculate_light(input_file, bias, device_name, vpp, gain_file, light_window_
     f.close()
 
 
-    
     # Read in the file and convert the waveforms to currents 
     sipm_file = h5py.File(input_file, "r")
     
@@ -275,7 +295,7 @@ def calculate_light(input_file, bias, device_name, vpp, gain_file, light_window_
             dset = f.create_dataset(f'{device}/dark/{bias}/window', data=dark_window)
 
 
-    if device_name == 'apd':
+    if device_name == 'apd' or device_name == 'apd_goofy':
         device = "apd"
 
         if f'{device}/{bias}/n_photons' in f:
