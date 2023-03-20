@@ -133,7 +133,7 @@ def parse_light_json(json_file_name: str) -> list(list, ... ):
         if not os.path.exists(dictionary["gain_file"]):
             raise ValueError("Gain file not found!")
         try:
-            f = h5py.File(gain_file, 'r')
+            f = h5py.File(dictionary["gain_file"], 'r')
             n_gains=(f[f'{dictionary["bias"]}/gain'][()])
             f.close()
         except: 
