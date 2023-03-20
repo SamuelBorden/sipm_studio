@@ -1,27 +1,14 @@
 """
 Peak finding and fitting routines to a charge spectrum, usually obtained through current_to_charge.py functions
 """
-
-import os, sys, h5py, json, time
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-from scipy.stats import linregress
-from uncertainties import ufloat, unumpy
 import warnings
 
 warnings.filterwarnings("ignore")
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
-from tqdm import tqdm
-
-tqdm.pandas()  # suppress annoying FutureWarning
-import random
 from scipy.signal import find_peaks
-import numba
-import time
-import scipy.signal as signal
 
 
 def gaussian(x: np.array, A: float, mu: float, sigma: float) -> np.array:

@@ -3,7 +3,7 @@ Processors for converting DAQ captured waveforms to current waveforms using know
 """
 import numpy as np
 
-### Create a harcoded dictionary of physical hardware settings to let the user select from
+# Create a hardcoded dictionary of physical hardware settings to let the user select from
 setting_dict = {
     "amplifier": {
         "sipm": {

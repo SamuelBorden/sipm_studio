@@ -1,7 +1,7 @@
 """
 Processors for converting charge to photons for APDs and SiPMs
 """
-from uncertainties import ufloat, unumpy
+from uncertainties import ufloat
 import numpy as np
 
 # define physical constants
@@ -32,7 +32,10 @@ def sipm_photons(charge: np.array, charge_err: np.array, gain: ufloat) -> float:
 
 
 def apd_photons(
-    charge: np.array, charge_err: np.array, photosensitivity: float = 24, l: float = 560
+    charge: np.array,
+    charge_err: np.array,
+    photosensitivity: float = 24,
+    lamb: float = 560,
 ) -> float:
     """
     Convert a given charge collected in an APD into a number of incident photons, using the provided photosensitivity.
@@ -46,15 +49,15 @@ def apd_photons(
         An array containing only the error on the charge collected at an APD
     photosensitivity
         The photosensitivity of the APD in A/W
-    l
+    lamb
         The wavelength of incident light in nm
     """
     charge = ufloat(charge[0], charge_err[0])
     photosensitivity = ufloat(photosensitivity, 1)
-    l = ufloat(l, 10)
+    lamb = ufloat(lamb, 10)
     # this conversion factor is determined by the integration over the LED spectrum
-    conversion_factor = 1.1880412517513259e17  # in units of gamma/coulomb
-    return ((charge / photosensitivity) * (l * 1e-9)) / (h * c)
+    # conversion_factor = 1.1880412517513259e17  # in units of gamma/coulomb
+    return ((charge / photosensitivity) * (lamb * 1e-9)) / (h * c)
 
 
 #     return charge*conversion_factor

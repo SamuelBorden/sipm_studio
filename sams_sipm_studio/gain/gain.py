@@ -1,4 +1,4 @@
-import os, h5py, json
+import os, h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from uncertainties import ufloat, unumpy

@@ -1,0 +1,9 @@
+{
+    "input_path": "/path/to/raw/files",
+    "output_path": "/path/to/analyzed/data",
+    "output_file_name": "output_name.h5",
+    "input_files": [
+    {"file": "t1_Data_ChannelDT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional_LED_info)", "bias": 54, "device_name": "sipm_1st", "vpp": 0.5, "start_idx": 50, "end_idx": 250 },
+    {"file": "t1_Data_ChannelDT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional_LED_info)", "bias": 54, "device_name": "sipm_1st", "vpp": 0.5, "start_idx": 50, "end_idx": 250 }
+    ]
+}
