@@ -1,4 +1,3 @@
-# +
 """
 Define functions that parse a json config file for various measurement configurations. 
 As an input takes the json file and the measurement level specified by the user and returns parameters needed
@@ -8,9 +7,24 @@ import os, json, h5py
 import numpy as np 
 from parse_config_filename import parse_compass_file_name
 
-def parse_gain_json(json_file_name):
+def parse_gain_json(json_file_name: str) -> list(list, ... ):
     """
-    json = {
+    Parse a config file defined specifically for the gain measurement script
+
+    Parameters 
+    ----------
+    json_file_name
+        Path to a json file containing parameters used for performing gain analysis 
+
+    Returns 
+    -------
+    out_args 
+        List of lists. Each list looks like ["path/to/input/input", bias, device_name, vpp, start_idx, end_idx, "path/to/output/output.h5"]
+
+
+    Example Config 
+    --------------
+    {
     "input_path": "/path/to/raw/files",
     "output_path": "/path/to/analyzed/data",
     "output_file_name": "output_name.h5", 
@@ -20,10 +34,7 @@ def parse_gain_json(json_file_name):
     {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)
 ", "bias": 54, "device_name": "sipm_1st", "vpp": 0.5, "start_idx": 50, "end_idx": 250 }
     ],
-    
     }
-    
-    out_args is a list of lists. Each list looks like ["path/to/input/input", bias, device_name, vpp, start_idx, end_idx, "path/to/output/output.h5"]
     """
     json_file = json.loads(json_file_name)
     

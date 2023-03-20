@@ -1,3 +1,6 @@
+"""
+Convert a CoMPASS Binary (.bin or .BIN) into a `raw` tier format h5py file. 
+"""
 import os
 import time
 import sys
@@ -13,25 +16,40 @@ import multiprocessing as mp
 
 
 
-# Create some parser arguments on what directory to write the output files to
+# Create some parser arguments on how many cores to multiprocess over
 
 parser = argparse.ArgumentParser(description='Convert CoMPASS files to h5 files')
-
 parser.add_argument('-c', '--core_num', help='number of cores to distribute files over', type=int, default=1)
-
 args = parser.parse_args()
 
-# set the default output directory and number of events if the user doesn't specify in the parserargs, warn the user 
-
+# set the number of processors from the user's specification
 num_processors = int(args.core_num)
 
+# just need it to glob together all files in a folder, pass the folder and then take the last part for the file name 
+# so that you don't accidentally pass it a path instead of a file name
+
+files = glob.glob("/data/eliza1/LEGEND/data/LNsipm/processing" + '/*.bin')
+files_2 = glob.glob("/data/eliza1/LEGEND/data/LNsipm/processing" + '/*.BIN')
+
+if len(files) == 0:
+    files = files_2
 
 
 
 
-# Get the length of the waveforms in the CoMPASS file, and also tell if the binary files is a CoMPASS2.0 file or not 
+def get_event_size(t0_file: str) -> tuple(int, bool): 
+    """
+    Get the length of the waveforms in the CoMPASS file, and also tell if the binary files is a CoMPASS2.0 file or not. 
 
-def get_event_size(t0_file): 
+    Parameters 
+    ----------
+    t0_file 
+        Path to binary CoMPASS file
+
+    Returns 
+    -------
+    event size, flag that's true if the file is CoMPASS2.0
+    """
     with open(t0_file, "rb") as file:
         first_header = file.read(2)
         file.close()
@@ -55,9 +73,19 @@ def get_event_size(t0_file):
         return 24 + 2 * num_samples, False  # number of bytes / 2
 
 
-# Get all info associated with a waveform in CoMPASS 1.0, return it i an array
+def get_event(event_data_bytes: bytes) -> tuple:
+    """
+    Decodes an event packet. Get all info associated with a waveform in CoMPASS 1.0, return it in an array
 
-def get_event(event_data_bytes):
+    Parameters 
+    ----------
+    event_data_bytes 
+        The packet for a single event read from a binary file as bytes 
+
+    Returns 
+    -------
+    board number, channel number, timestamp in ps, energy, energy short, flags, number of samples, and waveform
+    """
 
     board = np.frombuffer(event_data_bytes[0:2], dtype=np.uint16)[0]
     channel = np.frombuffer(event_data_bytes[2:4], dtype=np.uint16)[0]
@@ -71,10 +99,19 @@ def get_event(event_data_bytes):
     return _assemble_data_row(board, channel, timestamp, energy, energy_short, flags, num_samples, waveform)
 
 
-# Get all info associated with a waveform in CoMPASS 2.0, return it in an array
+def get_event_v2(event_data_bytes: bytes) -> tuple: 
+    """
+    Decodes an event packet. Get all info associated with a waveform in CoMPASS 2.0, return it in an array. 
 
-def get_event_v2(event_data_bytes): 
+    Parameters 
+    ----------
+    event_data_bytes 
+        The packet for a single event read from a binary file as bytes 
 
+    Returns 
+    -------
+    board number, channel number, timestamp in ps, energy, energy short, flags, number of samples, and waveform
+    """
     board = np.frombuffer(event_data_bytes[0:2], dtype=np.uint16)[0]
     channel =  np.frombuffer(event_data_bytes[2:4], dtype=np.uint16)[0]
     timestamp = np.frombuffer(event_data_bytes[4:12], dtype=np.uint64)[0]
@@ -89,9 +126,13 @@ def get_event_v2(event_data_bytes):
 
     return _assemble_data_row(board,channel, timestamp, energy, energy_short, flags, num_samples, waveform)
 
-# Create an array from the event data
 
-def _assemble_data_row(board,channel,timestamp,energy,energy_short,flags,num_samples,waveform):
+def _assemble_data_row(board: int, channel: int, timestamp: float, energy: float, energy_short: float, flags: float, num_samples: int, waveform: np.array) -> tuple:
+    """
+    Create an array from the event data. 
+
+    TODO: moonlight this function
+    """
     timestamp = timestamp
     energy = energy
     energy_short = energy_short
@@ -101,7 +142,25 @@ def _assemble_data_row(board,channel,timestamp,energy,energy_short,flags,num_sam
 
 # Write the massive output array to one h5 file
 
-def _output_to_h5file(data_file, output_name, output_path, events, waveforms, baselines):
+def _output_to_h5file(data_file: str, output_name: str, output_path: str, events: list, waveforms: np.array, baselines: np.array) -> None:
+    """
+    Given an output file name and output path, write the given data to an h5py file. 
+
+    Parameters 
+    ----------
+    data_file 
+        TODO: deprecate 
+    output_name
+        The name of the h5 file to write to
+    output_path 
+        The path for the h5 output file
+    events 
+        A list of information from the decoded events in a CoMPASS binary file,  timestamp, energy, energy_short, flags]
+    waveforms 
+        A numpy array of equal sized numpy arrays containing waveform data from CoMPASS 
+    baselines 
+        A numpy array of equal sized numpy arrays containing calculated baselines from waveform data from CoMPASS 
+    """
     destination = os.path.join(output_path, "t1_"+output_name+".h5")
     with h5py.File(destination, "w") as output_file:
         output_file.create_dataset("/raw/timetag", data=events.T[0])
@@ -112,7 +171,22 @@ def _output_to_h5file(data_file, output_name, output_path, events, waveforms, ba
 
 # Process all the files, for each file read in waveform by waveform and append data to one massive array that is written to file once 
 
-def process_metadata(files):
+def process_metadata(files: str) -> None:
+    """
+    Process all the files, for each file read in waveform by waveform and append data to one massive array that is written to file once. 
+
+    Parameters 
+    ----------
+    files 
+        A CoMPASS binary files that follow the regex "/data/eliza1/LEGEND/data/LNsipm/processing" + '/*.BIN'
+
+    Notes
+    -----
+    This function requires files to be placed in the "processing" directory under "/data/eliza1/LEGEND/data/LNsipm/". 
+    It works by reading in the first 2 bytes of a binary file to determine if it is a CoMPASS v2 file or not using :func:`get_event_size`. 
+    Then, it iterates over the bytes in file and decodes them with :func:`get_event_v2` or :func:`get_event. Finally, it writes the decoded
+    values to disk using :func:`_output_to_h5file`.  
+    """
     file_name = files
 
 #         print("processing file:") 
@@ -120,16 +194,20 @@ def process_metadata(files):
     event_rows = []
     waveform_rows = []
     baseline_rows = []
+
+    # get the waveform size, and also check if it is a CoMPASS v2 file or not 
     event_size, flag = get_event_size(file_name)
 
     without_extra_slash = os.path.normpath(file_name)
     last_part = os.path.basename(without_extra_slash)
 
+    # flag determines if it is a CoMPASS v2 file or not. 
     if flag:
 
         with open(file_name, "rb") as metadata_file:
             file_header = metadata_file.read(2) # read in the header present in v2 Compass...
             event_data_bytes = metadata_file.read(event_size)
+            # Decode 
             while event_data_bytes != b"":
                 event, waveform = get_event_v2(event_data_bytes)
                 baseline = peakutils.baseline(waveform)
@@ -137,6 +215,7 @@ def process_metadata(files):
                 waveform_rows.append(waveform)
                 baseline_rows.append(baseline)
                 event_data_bytes = metadata_file.read(event_size)
+        # Write to file 
         _output_to_h5file(file_name, last_part, "/data/eliza1/LEGEND/data/LNsipm/processed", np.array(event_rows), np.array(waveform_rows), np.array(baseline_rows))
 
 
@@ -144,6 +223,7 @@ def process_metadata(files):
 
         with open(file_name, "rb") as metadata_file:
             event_data_bytes = metadata_file.read(event_size)
+            # Decode
             while event_data_bytes != b"":
                 event, waveform = get_event(event_data_bytes)
                 baseline = peakutils.baseline(waveform)
@@ -151,24 +231,18 @@ def process_metadata(files):
                 waveform_rows.append(waveform)
                 baseline_rows.append(baseline)
                 event_data_bytes = metadata_file.read(event_size)
+        # Output to h5 file 
         _output_to_h5file(file_name, last_part, "/data/eliza1/LEGEND/data/LNsipm/processed", np.array(event_rows), np.array(waveform_rows), np.array(baseline_rows))
-
-
-# just need it to glob together all files in a folder, pass the folder and then take the last part for the file name so that you don't accidentally pass it a path instead of a file name
-
-files = glob.glob("/data/eliza1/LEGEND/data/LNsipm/processing" + '/*.bin')
-files_2 = glob.glob("/data/eliza1/LEGEND/data/LNsipm/processing" + '/*.BIN')
-
-if len(files) == 0:
-    files = files_2
-
-
 
 
 
 # Now run the program 
-
 if __name__=="__main__":
+    """
+    Parameters 
+    ----------
+    files is a list of globbed binary files, determined from a global variable set in this file to look at a specific directory
+    """
     
     with mp.Pool(num_processors) as p:
         p.map(process_metadata, files)
