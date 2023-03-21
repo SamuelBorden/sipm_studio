@@ -1,0 +1,9 @@
+{
+    "input_path": "/tmp/",
+    "output_path": "/tmp/",
+    "output_file_name": "test_gain_output.h5",
+    "input_files": [
+    {"file": "t1_Data_CH0@DT5730_1463_ketek_dark_rt_03-10-2023_apd_150V_sipm_545dv.h5", "bias": 54.5, "device_name": "sipm_1st", "vpp": 0.5, "start_idx": 50, "end_idx": 250 },
+    {"file": "t1_Data_CH0@DT5730_1463_ketek_dark_rt_03-10-2023_apd_150V_sipm_550dv.h5", "bias": 55, "device_name": "sipm_1st", "vpp": 0.5, "start_idx": 50, "end_idx": 250 }
+    ]
+}

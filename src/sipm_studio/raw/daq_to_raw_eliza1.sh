@@ -27,7 +27,7 @@ mkdir processing
 
 mv waiting/* processing
 
-singularity exec --bind /data/eliza1/LEGEND/data/LNsipm:/data/eliza1/LEGEND/data/LNsipm /data/eliza1/LEGEND/sw/containers/legend-base.sif /home/sjborden/sams_sipm_studio/raw/submit_daq_to_raw.sh
+singularity exec --bind /data/eliza1/LEGEND/data/LNsipm:/data/eliza1/LEGEND/data/LNsipm /data/eliza1/LEGEND/sw/containers/legend-base.sif /home/sjborden/sipm_studio/raw/submit_daq_to_raw.sh
 
 
 mv processing/* processed/processed_daq

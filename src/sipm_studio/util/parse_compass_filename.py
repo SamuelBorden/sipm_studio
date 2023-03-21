@@ -6,7 +6,7 @@ t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdb
 from datetime import datetime
 
 
-def parse_compass_file_name(file_name: str) -> tuple(str, int, float):
+def parse_compass_file_name(file_name: str) -> tuple[str, int, float]:
     """
     Reads in a CoMPASS file name and returns the date, channel number, and sipm bias
 
@@ -14,7 +14,7 @@ def parse_compass_file_name(file_name: str) -> tuple(str, int, float):
     ----------
     file_name
         Reads in a file name with the following format:
-        `t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)`
+        `t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH-DAY-YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)`
 
     Returns
     -------
@@ -25,8 +25,12 @@ def parse_compass_file_name(file_name: str) -> tuple(str, int, float):
     sipm_bias
         The SiPM bias that the data was recorded at
     """
+    if ("CH" not in file_name) or (len(file_name.split("CH")) < 2):
+        raise ValueError("File not named with 'CH0@' format.")
     channel_num = file_name.split("CH")[1].split("@")[0]
 
+    if "dv" not in file_name:
+        raise ValueError("File not named with SiPM bias in decivolts (dv).")
     sipm_bias = int(file_name.split("dv")[0][-3:])
     sipm_bias /= 10  # convert decivolts to volts
 
@@ -34,10 +38,11 @@ def parse_compass_file_name(file_name: str) -> tuple(str, int, float):
     date_idx = 0
     for i, split in enumerate(splits):
         try:
-            datetime.strptime(str(split), "%m/%d/%Y")
+            datetime.strptime(str(split), "%m-%d-%Y")
             date_idx = i
         except:
             pass
+
     if date_idx == 0:
         raise ValueError("Date time could not be processed from filename")
     else:

@@ -8,23 +8,23 @@ warnings.filterwarnings("ignore")
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
 
-from sams_sipm_studio.dsp.adc_to_current import current_converter
-from sams_sipm_studio.dsp.qpe_peak_finding import (
+from sipm_studio.dsp.adc_to_current import current_converter
+from sipm_studio.dsp.qpe_peak_finding import (
     fit_peaks,
     gaussian,
     guess_peaks_no_width,
     fit_peak,
 )
-from sams_sipm_studio.dsp.current_to_charge import (
+from sipm_studio.dsp.current_to_charge import (
     integrate_current,
     rando_integrate_current,
 )
-from sams_sipm_studio.dsp.gain_processors import (
+from sipm_studio.dsp.gain_processors import (
     normalize_charge,
     my_gain,
     slope_fit_gain,
 )
-from sams_sipm_studio.dsp.charge_to_photons import sipm_photons, apd_photons
+from sipm_studio.dsp.charge_to_photons import sipm_photons, apd_photons
 
 import argparse
 
