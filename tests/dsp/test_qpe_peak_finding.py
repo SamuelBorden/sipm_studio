@@ -100,19 +100,19 @@ def test_fit_peaks():
 
     assert pytest.approx(gauss_params[0][0], 1e-1) == A
     assert pytest.approx(gauss_params[0][1], 1e-1) == mu
-    assert pytest.approx(gauss_params[0][2], 1e-1) == sigma
+    assert pytest.approx(np.abs(gauss_params[0][2]), 1e-1) == sigma
 
     assert pytest.approx(gauss_params[1][0], 1e-1) == A2
     assert pytest.approx(gauss_params[1][1], 1e-1) == mu2
-    assert pytest.approx(gauss_params[1][2], 1e-1) == sigma2
+    assert pytest.approx(np.abs(gauss_params[1][2]), 1e-1) == sigma2
 
     assert pytest.approx(gauss_errs[0][0], 1e-1) == 0
     assert pytest.approx(gauss_errs[0][1], 1e-1) == 0
-    assert pytest.approx(gauss_errs[0][2], 1e-1) == 0
+    assert pytest.approx(np.abs(gauss_errs[0][2]), 1e-1) == 0
 
     assert pytest.approx(gauss_errs[1][0], 1e-1) == 0
     assert pytest.approx(gauss_errs[1][1], 1e-1) == 0
-    assert pytest.approx(gauss_errs[1][2], 1e-1) == 0
+    assert pytest.approx(np.abs(gauss_errs[1][2]), 1e-1) == 0
 
 
 def test_fit_peak():
@@ -138,8 +138,8 @@ def test_fit_peak():
 
     assert pytest.approx(gauss_params[0][0], 1e-1) == A2
     assert pytest.approx(gauss_params[0][1], 1e-1) == mu2
-    assert pytest.approx(gauss_params[0][2], 1e-1) == sigma2
+    assert pytest.approx(np.abs(gauss_params[0][2]), 1e-1) == sigma2
 
     assert pytest.approx(gauss_errs[0][0], 1e-1) == 0
     assert pytest.approx(gauss_errs[0][1], 1e-1) == 0
-    assert pytest.approx(gauss_errs[0][2], 1e-1) == 0
+    assert pytest.approx(np.abs(gauss_errs[0][2]), 1e-1) == 0
