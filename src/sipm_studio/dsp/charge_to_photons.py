@@ -54,7 +54,9 @@ def apd_photons(
     """
     charge = ufloat(charge[0], charge_err[0])
     photosensitivity = ufloat(photosensitivity, 1)
-    lamb = ufloat(lamb, 10)
+    lamb = ufloat(
+        lamb, 10 * lamb / 560
+    )  # TODO: be sure this is the error we want to propagate here!
     # this conversion factor is determined by the integration over the LED spectrum
     # conversion_factor = 1.1880412517513259e17  # in units of gamma/coulomb
     return ((charge / photosensitivity) * (lamb * 1e-9)) / (h * c)

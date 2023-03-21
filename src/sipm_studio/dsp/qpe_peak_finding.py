@@ -31,7 +31,7 @@ def gaussian(x: np.array, A: float, mu: float, sigma: float) -> np.array:
 
 def guess_peaks(
     n: np.array, bins: np.array, min_height: float, min_dist: float, min_width: float
-) -> tuple(np.array, np.array, np.array):
+) -> tuple[np.array, np.array, np.array]:
     """
     Routine for guessing the location of peaks in a charge spectrum. Uses `scipy`'s `find_peaks` with height, distance, and width parameters.
 
@@ -59,7 +59,7 @@ def guess_peaks(
 
 def guess_peaks_no_width(
     n: np.array, bins: np.array, min_height: float, min_dist: float
-) -> tuple(np.array, np.array, np.array):
+) -> tuple[np.array, np.array, np.array]:
     """
     Routine for guessing the location of peaks in a charge spectrum. Uses `scipy`'s `find_peaks` with height and distance parameters.
 
@@ -87,7 +87,7 @@ def fit_peaks(
     peak_locs: np.array,
     amplitudes: np.array,
     fit_width: float = 15,
-) -> tuple(np.array, np.array):
+) -> tuple[np.array, np.array]:
     """
     Routine for fitting identified peaks in a charge spectrum with a Gaussian function.
 
@@ -105,6 +105,13 @@ def fit_peaks(
         The amplitude, in counts, of a peak in the charge histogram
     fit_width
         The number of bins which to fit around each peak
+
+    Returns
+    -------
+    gauss_params
+        A list of three tuples, each tuple is of the form (amplitude, mu, sigma)
+    gauss_errors
+        A list of three tuples, each tuple is of the form (amplitude error, mu error, sigma error)
     """
     gauss_params = []
     gauss_errors = []
@@ -133,7 +140,7 @@ def fit_peak(
     peak_locs: np.array,
     amplitudes: np.array,
     fit_width: float = 15,
-) -> tuple(np.array, np.array):
+) -> tuple[np.array, np.array]:
     """
     fit one peak only, used in light analysis. Routine for fitting identified peaks in a charge spectrum with a Gaussian function.
 
@@ -151,13 +158,19 @@ def fit_peak(
         The amplitude, in counts, of a peak in the charge histogram
     fit_width
         The number of bins which to fit around each peak
+
+    Returns
+    -------
+    gauss_params
+        A list of three tuples, each tuple is of the form (amplitude, mu, sigma)
+    gauss_errors
+        A list of three tuples, each tuple is of the form (amplitude error, mu error, sigma error)
     """
     gauss_params = []
     gauss_errors = []
     bin_centers = (bins[1:] + bins[:-1]) / 2
     sigma_guess = (np.amax(bins)) / 2
     #     sigma_guess = 1e-11
-    print(sigma_guess)
     for i, peak in enumerate(peaks):
         left = peak - fit_width
         right = peak + fit_width
