@@ -41,7 +41,7 @@ if len(files) == 0:
     files = files_2
 
 
-def get_event_size(t0_file: str) -> tuple(int, bool):
+def get_event_size(t0_file: str) -> tuple[int, bool]:
     """
     Get the length of the waveforms in the CoMPASS file, and also tell if the binary files is a CoMPASS2.0 file or not.
 
@@ -66,7 +66,10 @@ def get_event_size(t0_file: str) -> tuple(int, bool):
             first_event = file.read(27)
             first_header_check = first_event[1]
             [num_samples] = np.frombuffer(first_event[23:27], dtype=np.uint32)
-        return 25 + 2 * num_samples, True  # number of bytes / 2
+        return (
+            25 + 2 * num_samples,
+            True,
+        )  # 25 bytes in the header per event and then 2*number of sample bytes for the waveform
 
     # This is for getting the waveform length in CoMPASS 1.0
 
