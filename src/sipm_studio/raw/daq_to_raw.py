@@ -158,7 +158,7 @@ def _assemble_data_row(
     energy_short = energy_short
     flags = flags
     waveform = waveform
-    return [timestamp, energy, energy_short, flags], waveform
+    return np.array([timestamp, energy, energy_short, flags]), waveform
 
 
 # Write the massive output array to one h5 file
@@ -202,7 +202,7 @@ def _output_to_h5file(
 # Process all the files, for each file read in waveform by waveform and append data to one massive array that is written to file once
 
 
-def process_metadata(files: str) -> None:
+def process_metadata(files: str, output_path: str) -> None:
     """
     Process all the files, for each file read in waveform by waveform and append data to one massive array that is written to file once.
 
@@ -210,6 +210,8 @@ def process_metadata(files: str) -> None:
     ----------
     files
         A CoMPASS binary files that follow the regex "/data/eliza1/LEGEND/data/LNsipm/processing" + '/*.BIN'
+    output_path
+        The path to a directory to which to write all output
 
     Notes
     -----
@@ -217,6 +219,9 @@ def process_metadata(files: str) -> None:
     It works by reading in the first 2 bytes of a binary file to determine if it is a CoMPASS v2 file or not using :func:`get_event_size`.
     Then, it iterates over the bytes in file and decodes them with :func:`get_event_v2` or :func:`get_event. Finally, it writes the decoded
     values to disk using :func:`_output_to_h5file`.
+
+    TODO: rename the files parameter `file` as this only takes one file at a time
+    TODO: rename this function, this processes actual data and not metadata..
     """
     file_name = files
 
@@ -252,7 +257,7 @@ def process_metadata(files: str) -> None:
         _output_to_h5file(
             file_name,
             last_part,
-            "/data/eliza1/LEGEND/data/LNsipm/processed",
+            output_path,
             np.array(event_rows),
             np.array(waveform_rows),
             np.array(baseline_rows),
@@ -274,7 +279,7 @@ def process_metadata(files: str) -> None:
         _output_to_h5file(
             file_name,
             last_part,
-            "/data/eliza1/LEGEND/data/LNsipm/processed",
+            output_path,
             np.array(event_rows),
             np.array(waveform_rows),
             np.array(baseline_rows),
@@ -289,7 +294,10 @@ def process_metadata(files: str) -> None:
 #     files is a list of globbed binary files, determined from a global variable set in this file to look at a specific directory
 #     """
 
+#     hardcoded_path = "/data/eliza1/LEGEND/data/LNsipm/processed"
+#     hardcoded_path_array = np.full(len(files), hardcoded_path)
+
 #     with mp.Pool(num_processors) as p:
-#         p.map(process_metadata, files)
+#         p.map(process_metadata, zip(files, hardcoded_path_array))
 
 #     # End the program
