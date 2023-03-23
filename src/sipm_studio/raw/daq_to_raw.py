@@ -16,29 +16,29 @@ import argparse
 import multiprocessing as mp
 
 
-# Create some parser arguments on how many cores to multiprocess over
+# # Create some parser arguments on how many cores to multiprocess over
 
-parser = argparse.ArgumentParser(description="Convert CoMPASS files to h5 files")
-parser.add_argument(
-    "-c",
-    "--core_num",
-    help="number of cores to distribute files over",
-    type=int,
-    default=1,
-)
-args = parser.parse_args()
+# parser = argparse.ArgumentParser(description="Convert CoMPASS files to h5 files")
+# parser.add_argument(
+#     "-c",
+#     "--core_num",
+#     help="number of cores to distribute files over",
+#     type=int,
+#     default=1,
+# )
+# args = parser.parse_args()
 
-# set the number of processors from the user's specification
-num_processors = int(args.core_num)
+# # set the number of processors from the user's specification
+# num_processors = int(args.core_num)
 
-# just need it to glob together all files in a folder, pass the folder and then take the last part for the file name
-# so that you don't accidentally pass it a path instead of a file name
+# # just need it to glob together all files in a folder, pass the folder and then take the last part for the file name
+# # so that you don't accidentally pass it a path instead of a file name
 
-files = glob.glob("/data/eliza1/LEGEND/data/LNsipm/processing" + "/*.bin")
-files_2 = glob.glob("/data/eliza1/LEGEND/data/LNsipm/processing" + "/*.BIN")
+# files = glob.glob("/data/eliza1/LEGEND/data/LNsipm/processing" + "/*.bin")
+# files_2 = glob.glob("/data/eliza1/LEGEND/data/LNsipm/processing" + "/*.BIN")
 
-if len(files) == 0:
-    files = files_2
+# if len(files) == 0:
+#     files = files_2
 
 
 def get_event_size(t0_file: str) -> tuple[int, bool]:
@@ -281,15 +281,15 @@ def process_metadata(files: str) -> None:
         )
 
 
-# Now run the program
-if __name__ == "__main__":
-    """
-    Parameters
-    ----------
-    files is a list of globbed binary files, determined from a global variable set in this file to look at a specific directory
-    """
+# # Now run the program
+# if __name__ == "__main__":
+#     """
+#     Parameters
+#     ----------
+#     files is a list of globbed binary files, determined from a global variable set in this file to look at a specific directory
+#     """
 
-    with mp.Pool(num_processors) as p:
-        p.map(process_metadata, files)
+#     with mp.Pool(num_processors) as p:
+#         p.map(process_metadata, files)
 
-    # End the program
+#     # End the program
