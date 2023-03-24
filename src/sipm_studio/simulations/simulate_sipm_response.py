@@ -360,7 +360,7 @@ def simulate_t0s(
                         num_ap = binom.rvs(num, alpha, size=1)[0] + 1
                     num_aps.append(num_ap)
                     for i in range(num_ap):
-                        dt_ap = expon.rvs(0, AP_rate, size=1)[0]
+                        dt_ap = expon.rvs(0, cell_recovery, size=1)[0]
                         if position + dt_ap <= wf_len:
                             num_xts_per_ap.append(num)
                             ap_t0s.append(position + dt_ap)
@@ -373,7 +373,7 @@ def simulate_t0s(
         )
 
         # Create amplitude for the APs
-        lap_amps = ap_recovery(ap_dts, AP_rate)
+        lap_amps = ap_recovery(ap_dts, cell_recovery)
         lap_amps = np.array(num_xts_per_ap) * lap_amps
         ap_amps.append(lap_amps * norm.rvs(mu_dcr, sigma_detector, size=len(ap_t0s)))
 
