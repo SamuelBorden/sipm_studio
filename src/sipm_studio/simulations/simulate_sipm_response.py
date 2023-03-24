@@ -367,15 +367,15 @@ def simulate_t0s(
                             ap_dts.append(dt_ap)
 
         # Create amplitudes for the dcrs and xts
-        dcr_amps.append(norm.rvs(mu_dcr, sigma_detector, size=len(t0s)))
+        dcr_amps.append(norm.rvs(1, sigma_detector, size=len(t0s)))
         xt_amps.append(
-            np.array(num_xts) * norm.rvs(mu_dcr, sigma_detector, size=len(xt_t0s))
+            np.array(num_xts) * norm.rvs(1, sigma_detector, size=len(xt_t0s))
         )
 
         # Create amplitude for the APs
         lap_amps = ap_recovery(ap_dts, cell_recovery)
         lap_amps = np.array(num_xts_per_ap) * lap_amps
-        ap_amps.append(lap_amps * norm.rvs(mu_dcr, sigma_detector, size=len(ap_t0s)))
+        ap_amps.append(lap_amps * norm.rvs(1, sigma_detector, size=len(ap_t0s)))
 
         # Save all of the info, each list in the list of lists is one waveform's info
         wf_dts.extend(dts)
