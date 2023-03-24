@@ -1,4 +1,4 @@
-
+exclude: ^(src/sipm_studio/simulations/sipm_simulation.ipynb|src/sipm_studio/simulations/.ipynb_checkpoints/)
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: "v4.4.0"
