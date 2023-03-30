@@ -1,3 +1,4 @@
+# .readthedocs.yaml
 version: 2
 
 sphinx:
@@ -30,4 +31,4 @@ python:
     - method: pip
       path: .
       extra_requirements:
-        - all
+        - requirements.txt
