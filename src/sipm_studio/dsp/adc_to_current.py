@@ -113,9 +113,9 @@ def current_converter(
     r"""
     Convert a DAQ ADC waveform to current using the amplification associated with the hardware configuration.
 
-    1. Convert the ADC (least significant bit, lsb) to voltage  $ADC \cdot \frac{v_{pp}}{2^{n_bits}}$
+    1. Convert the ADC (least significant bit, lsb) to voltage  :math:`ADC \cdot \frac{v_{pp}}{2^{n_bits}}`
         The CAEN DAQ splits the volage dynamic range (v_pp) into a binary number with n_bits of precision
-    2. Convert the voltage to current using the amplification/impedance of the hardware for the device: $V / Amp [A/V]$
+    2. Convert the voltage to current using the amplification/impedance of the hardware for the device: :math:`V / Amp [A/V]`
     """
     amp = _compute_amplification(setting_dict, device)
     return waveforms * (vpp / 2**n_bits) * (1 / amp)

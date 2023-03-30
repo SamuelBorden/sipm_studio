@@ -40,3 +40,24 @@ jobs:
           pip install pytest
           python -m pip install --upgrade .
           python -m pytest --import-mode=append tests/
+
+  test-docs:
+      name: Build documentation
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v2
+          with:
+            fetch-depth: 0
+        - uses: actions/setup-python@v2
+          with:
+            python-version: '3.10'
+        - name: Setup build environment
+          run: |
+            sudo apt-get install -y pandoc
+            python -m pip install --upgrade pip wheel setuptools
+            python -m pip install --upgrade .
+        - name: Build docs for current ref
+          run: |
+            cd docs
+            make clean
+            make

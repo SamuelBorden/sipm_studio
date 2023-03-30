@@ -203,15 +203,16 @@ def _output_to_h5file(
 
 
 def process_metadata(files: str, output_path: str) -> None:
-    """
+    r"""
     Process all the files, for each file read in waveform by waveform and append data to one massive array that is written to file once.
 
     Parameters
     ----------
     files
-        A CoMPASS binary files that follow the regex "/data/eliza1/LEGEND/data/LNsipm/processing" + '/*.BIN'
+        A CoMPASS binary files that follow the regex "/data/eliza1/LEGEND/data/LNsipm/processing" + "/\*.BIN"
     output_path
         The path to a directory to which to write all output
+
 
     Notes
     -----
@@ -221,8 +222,10 @@ def process_metadata(files: str, output_path: str) -> None:
     values to disk using :func:`_output_to_h5file`.
 
     TODO: rename the files parameter `file` as this only takes one file at a time
-    TODO: rename this function, this processes actual data and not metadata..
+    TODO: rename this function, this processes actual data and not metadata.
+
     """
+
     file_name = files
 
     #         print("processing file:")

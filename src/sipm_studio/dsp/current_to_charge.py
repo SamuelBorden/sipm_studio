@@ -11,8 +11,8 @@ def rando_integrate_current(
     Integrate a randomly section of a current waveform using a window of provided width.
     Useful if there is a high afterpulsing rate.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     current_forms
         An array of current waveforms
     width
@@ -38,8 +38,8 @@ def integrate_current(
     by the sampling rate to convert from samples to seconds. Could play around with numerically integrating
     the current waveforms, but a simple sum works well enough to convert to charge.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     current_forms
         An array of current waveforms
     lower_bound

@@ -29,14 +29,14 @@ class borel_gen(rv_discrete):
 
     def _pmf(self, n: int, mu: float) -> float:
         r"""
-        Computes the pmf for a Borel distribution $P(n, \mu) = \frac{e^{-\mu n}(\mu n)^{n-1}}{n!}$
+        Computes the pmf for a Borel distribution :math:`P(n, \mu) = \frac{e^{-\mu n}(\mu n)^{n-1}}{n!}`
         """
 
         return ((mu * n) ** (n - 1)) / (gamma(n + 1) * np.exp(mu * n))
 
     def _logpmf(self, n: int, mu: float) -> float:
         r"""
-        Computes the log of pmf for a Borel distribution $P(n, \mu) = -\mu n + (n-1)\log(\mu n)-\log(n!)$
+        Computes the log of pmf for a Borel distribution :math:`P(n, \mu) = -\mu n + (n-1)\log(\mu n)-\log(n!)`
         """
         return -mu * n + (n - 1) * np.log(mu * n) - gammaln(n + 1)
 
@@ -155,6 +155,7 @@ class synthetic_waveforms:
             Array of arrays, each array contains the amplitude of each xt event in a waveform
         ap_amps
             Array of arrays, each array contains the amplitude of each ap event in a waveform
+
         """
         self.num_wfs = num_wfs
         self.wf_len = wf_len
@@ -174,6 +175,7 @@ class synthetic_waveforms:
     def full_amplitudes(self) -> np.array:
         """
         Create the a flat arrays that has every single pulse amplitude in it
+
         """
         actual_amps = np.concatenate(np.array(self.dcr_amps, dtype="object")).flatten()
         flat_xt_amps = np.concatenate(np.array(self.xt_amps, dtype="object")).flatten()
@@ -183,14 +185,16 @@ class synthetic_waveforms:
         return actual_amps
 
     def calculate_xt(self) -> float:
-        """
-        Calculate the cross talk probability of a synthetic dataset by using $P_{xt} = \frac{\# XT}{\# XT + \# DCR}$
+        r"""
+        Calculate the cross talk probability of a synthetic dataset by using :math:`P_{xt} = \frac{\# XT}{\# XT + \# DCR}`
+
         """
         return len(self.wf_xt_dts) / (len(self.wf_dts) + len(self.wf_xt_dts))
 
     def calculate_ap(self) -> float:
-        """
-        Calculate the afterpulsing probability of a synthetic dataset by using $P_{ap} = \frac{\# AP}{\# XT + \# DCR}$
+        r"""
+        Calculate the afterpulsing probability of a synthetic dataset by using :math:`P_{ap} = \frac{\# AP}{\# XT + \# DCR}`
+
         """
         return len(self.wf_ap_dts) / (len(self.wf_dts) + len(self.wf_xt_dts))
 
@@ -198,6 +202,7 @@ class synthetic_waveforms:
         """
         Create an array of arrays, where each array is a waveform with a dirac spike for each simulated event.
         Each waveform has dark counts, cross talks, and afterpulses with amplitudes that were generated during the simulation.
+
         """
         wfs = []
         ts = np.arange(0, self.wf_len)

@@ -11,30 +11,32 @@ import copy
 
 def parse_gain_json(json_file_name: str) -> list[list, ...]:
     """
-        Parse a config file defined specifically for the gain measurement script
+    Parse a config file defined specifically for the gain measurement script
 
-        Parameters
-        ----------
-        json_file_name
-            Path to a json file containing parameters used for performing gain analysis
-
-        Returns
-        -------
-        out_args
-            List of lists. Each list looks like ["path/to/input/input", bias, device_name, vpp, start_idx, end_idx, "path/to/output/output.h5"]
+    Parameters
+    ----------
+    json_file_name
+        Path to a json file containing parameters used for performing gain analysis
 
 
-        Example Config
-        --------------
+    Returns
+    -------
+    out_args
+        List of lists. Each list looks like ["path/to/input/input", bias, device_name, vpp, start_idx, end_idx, "path/to/output/output.h5"]
+
+
+    JSON Configuration Example
+    --------------------------
+
+    .. code-block :: json
+
         {
         "input_path": "/path/to/raw/files",
         "output_path": "/path/to/analyzed/data",
         "output_file_name": "output_name.h5",
         "input_files": [
-        {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH-DAY-YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)
-    ", "bias": 54, "device_name": "sipm_1st", "vpp": 0.5, "start_idx": 50, "end_idx": 250 },
-        {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH-DAY-YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)
-    ", "bias": 54, "device_name": "sipm_1st", "vpp": 0.5, "start_idx": 50, "end_idx": 250 }
+        {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH-DAY-YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)", "bias": 54, "device_name": "sipm_1st", "vpp": 0.5, "start_idx": 50, "end_idx": 250 },
+        {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH-DAY-YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)", "bias": 54, "device_name": "sipm_1st", "vpp": 0.5, "start_idx": 50, "end_idx": 250 }
         ],
         }
     """
@@ -95,34 +97,37 @@ def parse_gain_json(json_file_name: str) -> list[list, ...]:
 
 def parse_light_json(json_file_name: str) -> list[list, ...]:
     """
-        Parse a config file defined specifically for the light/photon rate measurement script
+    Parse a config file defined specifically for the light/photon rate measurement script
 
-        Parameters
-        ----------
-        json_file_name
-            Path to a json file containing parameters used for performing light analysis
-
-        Returns
-        -------
-        out_args
-            List of lists. Each list looks like ["path/to/input/input", bias, device_name, vpp, "path/to/gain/gain_file.h5", light_window_start_idx, light_window_end_idx, dark_window_start_idx, dark_window_end_idx, "path/to/output/output.h5"]
+    Parameters
+    ----------
+    json_file_name
+        Path to a json file containing parameters used for performing light analysis
 
 
-        Notes
-        -----
-        Must be performed after the `.gain.gain` analysis script has been run on dark characterization data
+    Returns
+    -------
+    out_args
+        List of lists. Each list looks like ["path/to/input/input", bias, device_name, vpp, "path/to/gain/gain_file.h5", light_window_start_idx, light_window_end_idx, dark_window_start_idx, dark_window_end_idx, "path/to/output/output.h5"]
 
-        Example Config
-        --------------
+
+    Notes
+    -----
+    Must be performed after the `.gain.gain` analysis script has been run on dark characterization data
+
+
+    JSON Configuration Example
+    --------------------------
+
+    .. code-block :: json
+
         {
         "input_path": "/path/to/raw/files",
         "output_path": "/path/to/analyzed/data",
         "output_file_name": "light_output_name.h5",
         "input_files": [
-        {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)
-    ", "bias": 54, "device_name": "sipm_1st", "vpp": 0.5, "gain_file": "path/to/gain/file/gain_file.h5", "light_window_start_idx": 50, "light_window_end_idx": 250, "dark_window_start_idx": 4000, "dark_window_end_idx": 4200  },
-        {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)
-    ", "bias": 54.5, "device_name": "sipm_1st", "vpp": 0.5, "gain_file": "path/to/gain/file/gain_file.h5", "light_window_start_idx": 50, "light_window_end_idx": 250, "dark_window_start_idx": 4000, "dark_window_end_idx": 4200   }
+        {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)", "bias": 54, "device_name": "sipm_1st", "vpp": 0.5, "gain_file": "path/to/gain/file/gain_file.h5", "light_window_start_idx": 50, "light_window_end_idx": 250, "dark_window_start_idx": 4000, "dark_window_end_idx": 4200  },
+        {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)", "bias": 54.5, "device_name": "sipm_1st", "vpp": 0.5, "gain_file": "path/to/gain/file/gain_file.h5", "light_window_start_idx": 50, "light_window_end_idx": 250, "dark_window_start_idx": 4000, "dark_window_end_idx": 4200   }
         ],
         }
     """

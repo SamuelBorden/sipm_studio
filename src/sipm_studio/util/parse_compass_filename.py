@@ -16,6 +16,7 @@ def parse_compass_file_name(file_name: str) -> tuple[str, int, float]:
         Reads in a file name with the following format:
         `t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH-DAY-YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)`
 
+
     Returns
     -------
     date
