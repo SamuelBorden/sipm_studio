@@ -1,1 +1,7 @@
+furo
+myst-parser
+nbsphinx
 pre-commit
+sphinx
+sphinx-copybutton
+sphinx-inline-tabs
