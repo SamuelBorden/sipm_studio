@@ -80,3 +80,9 @@ autoclass_content = "both"
 autodoc_typehints = "both"
 autodoc_typehints_description_target = "documented_params"
 autodoc_typehints_format = "short"
+
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
+master_doc = "index"
