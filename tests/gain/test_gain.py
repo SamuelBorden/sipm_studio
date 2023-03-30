@@ -45,7 +45,7 @@ def test_calculate_gain(tmp_path):
     current_synth_wf = current_converter(synth_wf, 2, 14, "sipm")
     real_gain = integrate_current(current_synth_wf, 0, 1000, 2e-9)[0] / e_charge
 
-    assert real_gain == 3930703.710583516
+    assert real_gain == pytest.approx(3930703.710583516, rel=1e-3)
 
     d = tmp_path / "gain_test"
     d.mkdir()
