@@ -36,17 +36,15 @@ import argparse
 
 STD_FIT_WIDTH = 100  # number of bins to fit a gaussian to a std histogram
 SAMPLE_TIME = 2e-9  # convert the DT5730 sampling rate to seconds
-num_peaks = 4  # maximum number of peaks to find in a QPE
+num_peaks = 3  # maximum number of peaks to find in a QPE
 QPE_FIT_WIDTH = (
-    10  # number of bins to fit around the tallest peak in a QPE to guess the stddev
+    15  # number of bins to fit around the tallest peak in a QPE to guess the stddev
 )
 BIN_STD = 100  # number to multiply the bin width by in the tallest peak fitting to get a convergent fit
-MIN_QPE_HEIGHT = 7  # minimum height in counts to find a QPE peak
-QPE_FIT_WIDTH = 20  # number of bins to fit the QPE gaussian peaks with
-SIGMA_DISTANCE = (
-    5  # number of standard deviations to set as the minimum distance between QPE peaks
-)
-SIGMA_WIDTH = 2  # the number of sigma for minimum peak width in QPE peak finding
+MIN_QPE_HEIGHT = 8  # minimum height in counts to find a QPE peak
+SIGMA_DISTANCE = 0.6  # number of standard deviations to set as the minimum distance between QPE peaks
+SIGMA_WIDTH = 0.05  # the number of sigma for minimum peak width in QPE peak finding
+RANGE_INT = 10  #  number that multiplies the median of a charge histogram to get the upper range
 
 
 def calculate_gain(
@@ -121,13 +119,21 @@ def calculate_gain(
     except:
         raise ValueError("Standard Deviation fit failed gracefully")
 
+    print(bins[np.argmax(n)])
+    print("cutting less than", params[0][1] + 2 * params[0][2])
     cut_value = (
         params[0][1] + 2 * params[0][2]
     )  # cut from the median plus 2 standard deviations
 
     bls = np.array(bls)
-    std_cut_bls = bls[(std < cut_value)]
-    std_cut_wfs = waveformies[(std < cut_value)]
+    # don't do any cuts if the median is larger than the cut value
+    if bins[np.argmax(n)] > cut_value:
+        std_cut_bls = bls[:]
+        std_cut_wfs = waveformies[:]
+
+    else:
+        std_cut_bls = bls[(std < cut_value)]
+        std_cut_wfs = waveformies[(std < cut_value)]
 
     nice_wfs = std_cut_wfs - std_cut_bls
 
@@ -152,9 +158,10 @@ def calculate_gain(
     )
 
     print("saving raw QPE")
+    q_max = min(np.amax(qs), RANGE_INT * np.median(qs))
     # Save a figure of the raw QPE spectrum in case it looks bad and needs manual inspection
     fig = plt.figure(figsize=(12, 8))
-    plt.hist(qs, bins=1000)
+    plt.hist(qs, bins=1000, range=[0, q_max])
     plt.yscale("log")
     plt.xlabel("Charge [C]")
     plt.ylabel("Counts")
@@ -163,7 +170,7 @@ def calculate_gain(
     plt.savefig(fig_path, dpi=fig.dpi)
 
     # Here's the hard part: actually do the fitting. First, make the QPE
-    ramge = [-0.02e-12, np.amax(qs)]
+    ramge = [0, q_max]
     fig = plt.figure(figsize=(12, 8))
     n, bins, patches = plt.hist(qs, bins=1000, range=ramge, histtype="step")
     n, bins, patches = plt.hist(
@@ -204,6 +211,8 @@ def calculate_gain(
     peaks = peaks[:num_peaks]
     peak_locs = peak_locs[:num_peaks]
     amplitudes = amplitudes[:num_peaks]
+
+    print(f"found {len(peaks)} peaks")
 
     # Now try fitting the rest of the peaks
     try:

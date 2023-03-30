@@ -116,8 +116,8 @@ class synthetic_waveforms:
         wf_xt_dts: list,
         wf_num_aps: list,
         wf_num_xts_per_ap: list,
-        wf_ap_t0s: list,
-        wf_ap_dts: np.array,
+        wf_ap_t0s: np.array,
+        wf_ap_dts: list,
         dcr_amps: list,
         xt_amps: list,
         ap_amps: list,
@@ -285,7 +285,7 @@ class synthetic_waveforms:
             elif len(self.wf_t0s[k]) == 0:
                 shift = self.wf_xt_t0s[k][0]
             else:
-                shift = min(self.wf_t0s[k][0], self.wf_xt_t0s[k][0]) + 10
+                shift = min(self.wf_t0s[k][0], self.wf_xt_t0s[k][0])
 
             # Put in the dark counts
             for j, i in enumerate(self.wf_t0s[k]):

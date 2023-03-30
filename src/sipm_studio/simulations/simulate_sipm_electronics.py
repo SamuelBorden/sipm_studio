@@ -90,6 +90,7 @@ def model_fit(
     N_samples = len(t[int(t0_idx) :])
     if (N_samples == 0) or (N_samples == 1):
         return np.zeros(len(t))
-    t_model, y = signal.impulse(fit_model, N=N_samples)
-    out = np.insert(y, 0, np.zeros(len(t) - len(y)))  # insert 0s at the start before t0
+    t_model, y = signal.impulse(fit_model, N=1000)
+    out = np.insert(y, 0, np.zeros(int(t0_idx)))  # insert 0s at the start before t0
+    out = out[: len(t)]
     return out
