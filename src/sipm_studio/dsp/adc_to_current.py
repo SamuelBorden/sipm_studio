@@ -96,6 +96,10 @@ def _compute_amplification(settings: dict, channel: str) -> float:
     return full_amp
 
 
+def compute_sipm_amp() -> float:
+    return _compute_amplification(setting_dict, "sipm")
+
+
 apd_amp = _compute_amplification(setting_dict, "apd")
 sipm_amp = _compute_amplification(setting_dict, "sipm")
 sipm_amp_1st_stage = _compute_amplification(setting_dict, "sipm_1st")

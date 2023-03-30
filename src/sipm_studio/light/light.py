@@ -45,8 +45,11 @@ STD_FIT_WIDTH = 100  # number of bins to fit a gaussian to a std histogram
 SAMPLE_TIME = 2e-9  # convert the DT5730 sampling rate to seconds
 BL_START_IDX = 4000
 BL_END_IDX = 4250  # index to start and stop calculating mean values for the baseline
-LIGHT_QPE_HEIGHT = 30  # Minimum height in counts to idnetify a peak in the QPE spectrum
-DARK_QPE_HEIGHT = 40
+LIGHT_QPE_HEIGHT = 10  # Minimum height in counts to idnetify a peak in the QPE spectrum
+DARK_QPE_HEIGHT = 10
+LIGHT_QPE_WIDTH = 1e-1  # minimum peak width to look for
+DARK_QPE_WIDTH = 1e-1
+NUM_BINS_FIT = 50
 
 
 def calculate_light(
@@ -143,8 +146,14 @@ def calculate_light(
     )  # cut from the median plus 5 standard deviations
 
     bls = np.array(bls)
-    std_cut_bls = bls[(std < cut_value)]
-    std_cut_wfs = waveformies[(std < cut_value)]
+    # don't do any cuts if the median is larger than the cut value
+    if bins[np.argmax(n)] > cut_value:
+        std_cut_bls = bls[:]
+        std_cut_wfs = waveformies[:]
+
+    else:
+        std_cut_bls = bls[(std < cut_value)]
+        std_cut_wfs = waveformies[(std < cut_value)]
 
     # Calculate the baselines
     if device_name == "apd" or device_name == "apd_goofy":
@@ -229,6 +238,8 @@ def calculate_light(
     plt.xlabel("Integrated Charge (C)")
     plt.ylabel("Counts")
     plt.yscale("log")
+    fig_path = out_path + "/light_qpe_" + str(bias) + "_" + str(device_name) + ".png"
+    plt.savefig(fig_path, dpi=fig.dpi)
 
     plt.figure()
     n_dark, bins_dark, patches_dark = plt.hist(qs_dark, bins=500, histtype="step")
@@ -241,11 +252,13 @@ def calculate_light(
 
     try:
         peaks, peak_locs, amplitudes = guess_peaks_no_width(
-            n, bins, LIGHT_QPE_HEIGHT, 1e-2
+            n, bins, LIGHT_QPE_HEIGHT, LIGHT_QPE_WIDTH
         )
+        print("Found light peaks")
         peaks_dark, peak_locs_dark, amplitudes_dark = guess_peaks_no_width(
-            n_dark, bins_dark, DARK_QPE_HEIGHT, 2e-12
+            n_dark, bins_dark, DARK_QPE_HEIGHT, DARK_QPE_WIDTH
         )
+        print("found dark peaks")
 
     except:
         raise ValueError("Peak Finding failed")
@@ -253,7 +266,7 @@ def calculate_light(
     # Fit with a Gaussian
     try:
         gauss_params, gauss_errors = fit_peak(
-            n, bins, peaks, peak_locs, amplitudes, fit_width=10000
+            n, bins, peaks, peak_locs, amplitudes, fit_width=NUM_BINS_FIT
         )
         gauss_params_dark, gauss_errors_dark = fit_peak(
             n_dark,
@@ -261,7 +274,7 @@ def calculate_light(
             peaks_dark,
             peak_locs_dark,
             amplitudes_dark,
-            fit_width=1000,
+            fit_width=NUM_BINS_FIT,
         )
 
     except:
