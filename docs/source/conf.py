@@ -87,4 +87,4 @@ source_suffix = {
 }
 master_doc = "index"
 
-html_static_path = ["_static"]
+html_static_path = []
