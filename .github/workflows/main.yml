@@ -55,7 +55,7 @@ jobs:
           run: |
             sudo apt-get install -y pandoc
             python -m pip install --upgrade pip wheel setuptools
-            python -m pip install sphinx sphinx-copybutton sphinx-inline-tabs myst-parser nbsphinx
+            python -m pip install sphinx sphinx-copybutton sphinx-inline-tabs myst-parser nbsphinx furo
             python -m pip install --upgrade .
         - name: Build docs for current ref
           run: |

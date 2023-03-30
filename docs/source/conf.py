@@ -86,3 +86,5 @@ source_suffix = {
     ".md": "markdown",
 }
 master_doc = "index"
+
+html_static_path = ["_static"]
