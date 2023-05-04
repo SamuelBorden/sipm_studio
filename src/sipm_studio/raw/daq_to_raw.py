@@ -301,6 +301,6 @@ def process_metadata(files: str, output_path: str) -> None:
 #     hardcoded_path_array = np.full(len(files), hardcoded_path)
 
 #     with mp.Pool(num_processors) as p:
-#         p.map(process_metadata, zip(files, hardcoded_path_array))
+#         p.starmap(process_metadata, zip(files, hardcoded_path_array))
 
 #     # End the program
