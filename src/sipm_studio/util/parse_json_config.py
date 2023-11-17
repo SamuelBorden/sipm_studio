@@ -209,7 +209,7 @@ def parse_light_json(json_file_name: str) -> list[list, ...]:
     return out_args
 
 
-def parse_pde_json(json_file_name: str) -> list[list, ...]:
+def parse_pde_json(json_file_name: str) -> list:
     """
     Parse a config file defined specifically for the light/photon rate measurement script
 
@@ -256,7 +256,10 @@ def parse_pde_json(json_file_name: str) -> list[list, ...]:
     if os.path.exists(
         os.path.join(json_file["output_path"], json_file["output_file_name"])
     ):
-        raise ValueError("Output file already exists")
+        print(
+            "Looks like there is a file here already, let's hope we don't delete anything."
+        )
+        # raise ValueError("Output file already exists")
 
     # go through each file, join the paths, check that the names are valid, and then put in a list that can
     # be passed to multiprocessing.pool
@@ -301,7 +304,7 @@ def parse_pde_json(json_file_name: str) -> list[list, ...]:
             str(dictionary["device_name"])
             not in ["sipm", "sipm_1st", "sipm_1st_low_gain"]
         ):
-            raise ValueError("Channel number does not agree that this is a SiPM")
+            raise ValueError("Channel number does not agree, says that this is a SiPM")
 
         # Now create a tuple that multiprocessor.pool can take as an input
         out_form = [

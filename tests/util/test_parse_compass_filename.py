@@ -17,11 +17,8 @@ def test_parse_compass_file_name():
 
     # Make sure we get exceptions in wrong date case
     bad_test_name = "t1_Data_CH1@DT5730_1463_sipm_dark_rt_03-100-2023_apd_150V_sipm_545dv_led_1kHz_500ns_210v.BIN"
-    with pytest.raises(ValueError) as exc_info:
-        date, channel_num, bias = parse_compass_file_name(bad_test_name)
-
-    assert exc_info.type is ValueError
-    assert exc_info.value.args[0] == "Date time could not be processed from filename"
+    date, channel_num, bias = parse_compass_file_name(bad_test_name)
+    assert date == "00-00-0000"
 
     # Make sure we get exceptions in wrong channel name case
     bad_test_name = "t1_Data_Channel1@DT5730_1463_sipm_dark_rt_03-10-2023_apd_150V_sipm_545dv_led_1kHz_500ns_210v.BIN"

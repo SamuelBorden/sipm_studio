@@ -51,6 +51,7 @@ def test_parse_gain_json(tmp_path):
     good_config["output_path"] = str(d)
 
     json_to_write = json.dumps(good_config)
+    print(json_to_write)
     with open(f"{str(d)}/gain_specs.json", "w") as outfile:
         outfile.write(json_to_write)
 

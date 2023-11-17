@@ -1,0 +1,19 @@
+{
+    "input_path": "/data/eliza1/LEGEND/data/LNsipm/processed",
+    "output_path": "/home/sjborden/automatic_pde_calculator_results",
+    "output_file_name": "ketek_rt_lid_pde_10-13-2023_1.h5",
+    "input_files": [
+        {"file": "t1_Data_CH0@DT5730_1463_ketek_rt_pde_lid_10-13-2023_248dv_broadcom_3440mv_led_3kHz_16ns_330v.BIN.h5" , "bias": 24.8, "device_name": "sipm", "vpp": 0.5, "light_window_start_idx": 248, "light_window_end_idx": 598, "dark_window_start_idx": 1650, "dark_window_end_idx": 2000},
+        {"file": "t1_Data_CH0@DT5730_1463_ketek_rt_pde_lid_10-13-2023_253dv_broadcom_3440mv_led_3kHz_16ns_330v.BIN.h5" , "bias": 25.3, "device_name": "sipm", "vpp": 0.5, "light_window_start_idx": 248, "light_window_end_idx": 598, "dark_window_start_idx": 1650, "dark_window_end_idx": 2000},
+        {"file": "t1_Data_CH0@DT5730_1463_ketek_rt_pde_lid_10-13-2023_258dv_broadcom_3440mv_led_3kHz_16ns_330v.BIN.h5" , "bias": 25.8, "device_name": "sipm", "vpp": 0.5, "light_window_start_idx": 248, "light_window_end_idx": 598, "dark_window_start_idx": 1650, "dark_window_end_idx": 2000},
+        {"file": "t1_Data_CH0@DT5730_1463_ketek_rt_pde_lid_10-13-2023_263dv_broadcom_3440mv_led_3kHz_16ns_330v.BIN.h5" , "bias": 26.3, "device_name": "sipm", "vpp": 0.5, "light_window_start_idx": 248, "light_window_end_idx": 598, "dark_window_start_idx": 1650, "dark_window_end_idx": 2000},
+        {"file": "t1_Data_CH0@DT5730_1463_ketek_rt_pde_lid_10-13-2023_268dv_broadcom_3440mv_led_3kHz_16ns_330v.BIN.h5" , "bias": 26.8, "device_name": "sipm", "vpp": 0.5, "light_window_start_idx": 248, "light_window_end_idx": 598, "dark_window_start_idx": 1650, "dark_window_end_idx": 2000},
+        {"file": "t1_Data_CH0@DT5730_1463_ketek_rt_pde_lid_10-13-2023_273dv_broadcom_3440mv_led_3kHz_16ns_330v.BIN.h5" , "bias": 27.3, "device_name": "sipm", "vpp": 2, "light_window_start_idx": 248, "light_window_end_idx": 598, "dark_window_start_idx": 1650, "dark_window_end_idx": 2000},
+        {"file": "t1_Data_CH0@DT5730_1463_ketek_rt_pde_lid_10-13-2023_278dv_broadcom_3440mv_led_3kHz_16ns_330v.BIN.h5" , "bias": 27.8, "device_name": "sipm", "vpp": 2, "light_window_start_idx": 248, "light_window_end_idx": 598, "dark_window_start_idx": 1650, "dark_window_end_idx": 2000},
+        {"file": "t1_Data_CH0@DT5730_1463_ketek_rt_pde_lid_10-13-2023_283dv_broadcom_3440mv_led_3kHz_16ns_330v.BIN.h5" , "bias": 28.3, "device_name": "sipm", "vpp": 2, "light_window_start_idx": 248, "light_window_end_idx": 598, "dark_window_start_idx": 1650, "dark_window_end_idx": 2000},
+        {"file": "t1_Data_CH0@DT5730_1463_ketek_rt_pde_lid_10-13-2023_288dv_broadcom_3440mv_led_3kHz_16ns_330v.BIN.h5" , "bias": 28.8, "device_name": "sipm", "vpp": 2, "light_window_start_idx": 248, "light_window_end_idx": 598, "dark_window_start_idx": 1650, "dark_window_end_idx": 2000},
+        {"file": "t1_Data_CH0@DT5730_1463_ketek_rt_pde_lid_10-13-2023_293dv_broadcom_3440mv_led_3kHz_16ns_330v.BIN.h5" , "bias": 29.3, "device_name": "sipm", "vpp": 2, "light_window_start_idx": 248, "light_window_end_idx": 598, "dark_window_start_idx": 1650, "dark_window_end_idx": 2000},
+        {"file": "t1_Data_CH0@DT5730_1463_ketek_rt_pde_lid_10-13-2023_298dv_broadcom_3440mv_led_3kHz_16ns_330v.BIN.h5" , "bias": 29.8, "device_name": "sipm", "vpp": 2, "light_window_start_idx": 248, "light_window_end_idx": 598, "dark_window_start_idx": 1650, "dark_window_end_idx": 2000},
+        {"file": "t1_Data_CH0@DT5730_1463_ketek_rt_pde_lid_10-13-2023_303dv_broadcom_3440mv_led_3kHz_16ns_330v.BIN.h5" , "bias": 30.3, "device_name": "sipm", "vpp": 2, "light_window_start_idx": 248, "light_window_end_idx": 598, "dark_window_start_idx": 1650, "dark_window_end_idx": 2000}
+    ]
+}

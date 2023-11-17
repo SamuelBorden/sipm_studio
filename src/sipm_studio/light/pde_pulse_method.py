@@ -31,27 +31,17 @@ from sipm_studio.dsp.charge_to_photons import sipm_photons, apd_photons
 
 import argparse
 
-## Set up parser arguments so that the multiprocessing pool can receive everything correctly
-
-# parser = argparse.ArgumentParser(description='Calculate gain of SiPMs')
-# parser.add_argument('-c', '--core_num', help='number of cores to distribute files over', type=int, default=1)
-# parser.add_argument('-f', '--file', help='json spec file', type=str, default="/home/sjborden/sams_sipm_studio/examples/default_gain.json")
-
-# args = parser.parse_args()
-# num_processors = int(args.core_num)
-# json_file_path = str(args.file)
-
-
 # Set up some global variables so that automatic Gaussian fitting can work properly
 
 STD_FIT_WIDTH = 100  # number of bins to fit a gaussian to a std histogram
 SAMPLE_TIME = 2e-9  # convert the DT5730 sampling rate to seconds
 bl_idx = 100  # index to calculate the baseline preceding the led pulse
 
-LIGHT_QPE_HEIGHT = 10  # Minimum height in counts to idnetify a peak in the QPE spectrum
-DARK_QPE_HEIGHT = 10
-LIGHT_QPE_WIDTH = 1e-1  # minimum peak width to look for
-DARK_QPE_WIDTH = 1e-1
+LIGHT_QPE_HEIGHT = 30  # Minimum height in counts to idnetify a peak in the QPE spectrum
+DARK_QPE_HEIGHT = 80
+
+LIGHT_QPE_WIDTH = 2e-13  # minimum peak width to look for
+DARK_QPE_WIDTH = 1e-12
 NUM_BINS_FIT = 50
 
 
@@ -76,6 +66,7 @@ def calculate_pulse_pde(
     dark_window_start_idx: int,
     dark_window_end_idx: int,
     output_file: str,
+    lock,
 ) -> None:
     """
     For a given file, read in the waveforms and convert them to current waveforms. Then, integrate the waveforms.
@@ -103,6 +94,8 @@ def calculate_pulse_pde(
         The index at which to end integrating a current waveform under dark conditions -- the window must be the same width as the light window for error free analysis
     output_file
         The name of the file in which to place the output of the calculated photon rates
+    lock
+        The lock to prevent writing to the same file at the same time
 
     Notes
     -----
@@ -187,7 +180,8 @@ def calculate_pulse_pde(
     plt.ylabel("Counts")
     plt.yscale("log")
     fig_path = out_path + "/light_qpe_" + str(bias) + "_" + str(device_name) + ".png"
-    plt.savefig(fig_path, dpi=fig.dpi)
+    if False:
+        plt.savefig(fig_path, dpi=fig.dpi)
 
     fig = plt.figure(figsize=(12, 8))
     n_dark, bins_dark, patches_dark = plt.hist(qs_dark, bins=NBINS, histtype="step")
@@ -198,7 +192,8 @@ def calculate_pulse_pde(
     plt.ylabel("Counts")
     plt.yscale("log")
     fig_path = out_path + "/dark_qpe_" + str(bias) + "_" + str(device_name) + ".png"
-    plt.savefig(fig_path, dpi=fig.dpi)
+    if False:
+        plt.savefig(fig_path, dpi=fig.dpi)
 
     try:
         peaks, peak_locs, amplitudes = guess_peaks_no_width(
@@ -206,16 +201,9 @@ def calculate_pulse_pde(
         )
         print("Found light peaks")
 
-        # only care about the location of the pedestal
-        peaks = peaks[:1]
-        peak_locs = peak_locs[:1]
-        amplitudes = amplitudes[:1]
-
         peaks_dark, peak_locs_dark, amplitudes_dark = guess_peaks_no_width(
             n_dark, bins_dark, DARK_QPE_HEIGHT, DARK_QPE_WIDTH
         )
-        print("Found light peaks")
-
         # only care about the location of the pedestal
         peaks = peaks[:1]
         peak_locs = peak_locs[:1]
@@ -232,6 +220,7 @@ def calculate_pulse_pde(
         gauss_params, gauss_errors = fit_peak(
             n, bins, peaks, peak_locs, amplitudes, fit_width=NUM_BINS_FIT
         )
+
         gauss_params_dark, gauss_errors_dark = fit_peak(
             n_dark,
             bins_dark,
@@ -300,7 +289,7 @@ def calculate_pulse_pde(
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     # Calculate the gain and number of photons
     bin_width = bins[1] - bins[0]
-    fit_width = int(2.355 * centroid_std / bin_width)  # fit the FWHM of the pedestal
+    fit_width = int(2.355 * centroid_std[0] / bin_width)  # fit the FWHM of the pedestal
 
     if device_name not in ["reference"]:
         gain = calculate_gain(
@@ -309,14 +298,21 @@ def calculate_pulse_pde(
             device_name,
             qs,
             qs_dark,
-            5 * 2.355 * centroid_std,
+            centroid[0],
+            2.355 * 2 * centroid_std[0],
             fit_width,
-        )  # look for peaks 5 FWHMs away from the pedestal
+        )
         print(gain)
 
+    # Use this block if the reference diode is changing bias voltage, like for calculating the gain of the reference diode
+    #     else:
+    #         gain = calculate_gain(out_path, bias, device_name, qs, qs_dark, centroid[0], 2.355*6*centroid_std[0], fit_width)
+    #         print(gain)
+
+    # good if the reference diode is fixed
     else:
         gain = calculate_gain(
-            out_path, bias, device_name, qs, qs_dark, 0.5e-12, fit_width
+            out_path, bias, device_name, qs, qs_dark, centroid[0], 0.5e-12, fit_width
         )
         print(gain)
 
@@ -355,6 +351,7 @@ def calculate_pulse_pde(
 
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     # Save it all to a file
+    lock.acquire()
     f = h5py.File(output_file, "a")
 
     if (
@@ -364,53 +361,50 @@ def calculate_pulse_pde(
         or device_name == "sipm_1st_low_gain_goofy"
     ):
 
-        device_name = "sipm"
+        device = "sipm"
 
-        if f"{device_name}/{bias}/n_photons" in f:
-            f[f"{device_name}/{bias}/n_photons"][:] = n_q
-            f[f"{device_name}/{bias}/charges"][:] = qs
-            f[f"{device_name}/{bias}/window"][:] = window
-            f[f"{device_name}/{bias}/gain"][:] = gain
-            f[f"{device_name}/dark/{bias}/charges"][:] = qs_dark
-            f[f"{device_name}/dark/{bias}/window"][:] = dark_window
+        if f"{device}/{bias}/n_photons" in f:
+            f[f"{device}/{bias}/n_photons"][:] = n_q
+            f[f"{device}/{bias}/charges"][:] = qs
+            f[f"{device}/{bias}/window"][:] = window
+            f[f"{device}/{bias}/gain"][:] = gain
+            f[f"{device}/dark/{bias}/charges"][:] = qs_dark
+            f[f"{device}/dark/{bias}/window"][:] = dark_window
 
         else:
-            dset = f.create_dataset(f"{device_name}/{bias}/n_photons", data=n_q)
-            dset = f.create_dataset(f"{device_name}/{bias}/charges", data=qs)
-            dset = f.create_dataset(f"{device_name}/{bias}/window", data=window)
-            dset = f.create_dataset(f"{device_name}/{bias}/gain", data=gain)
-            dset = f.create_dataset(f"{device_name}/dark/{bias}/charges", data=qs_dark)
-            dset = f.create_dataset(
-                f"{device_name}/dark/{bias}/window", data=dark_window
-            )
+            dset = f.create_dataset(f"{device}/{bias}/n_photons", data=n_q)
+            dset = f.create_dataset(f"{device}/{bias}/charges", data=qs)
+            dset = f.create_dataset(f"{device}/{bias}/window", data=window)
+            dset = f.create_dataset(f"{device}/{bias}/gain", data=gain)
+            dset = f.create_dataset(f"{device}/dark/{bias}/charges", data=qs_dark)
+            dset = f.create_dataset(f"{device}/dark/{bias}/window", data=dark_window)
 
     if device_name == "reference" or device_name == "apd_goofy" or device_name == "apd":
-        device_name = "reference"
+        device = "reference"
 
-        if f"{device_name}/{bias}/n_photons" in f:
-            del f[f"{device_name}/{bias}/n_photons"]
-            dset = f.create_dataset(f"{device_name}/{bias}/n_photons", data=n_q)
-            #         f[f'{device_name}/{bias}/n_photons'][:] = n_q
-            del f[f"{device_name}/{bias}/charges"]
-            dset = f.create_dataset(f"{device_name}/{bias}/charges", data=qs)
-            f[f"{device_name}/{bias}/window"][:] = window
-            f[f"{device_name}/{bias}/gain"][:] = gain
-            del f[f"{device_name}/dark/{bias}/charges"]
-            dset = f.create_dataset(f"{device_name}/dark/{bias}/charges", data=qs_dark)
-            f[f"{device_name}/dark/{bias}/charges"][:] = qs_dark
-            f[f"{device_name}/dark/{bias}/window"][:] = dark_window
+        if f"{device}/{bias}/n_photons" in f:
+            del f[f"{device}/{bias}/n_photons"]
+            dset = f.create_dataset(f"{device}/{bias}/n_photons", data=n_q)
+            #         f[f'{device}/{bias}/n_photons'][:] = n_q
+            del f[f"{device}/{bias}/charges"]
+            dset = f.create_dataset(f"{device}/{bias}/charges", data=qs)
+            f[f"{device}/{bias}/window"][:] = window
+            f[f"{device}/{bias}/gain"][:] = gain
+            del f[f"{device}/dark/{bias}/charges"]
+            dset = f.create_dataset(f"{device}/dark/{bias}/charges", data=qs_dark)
+            f[f"{device}/dark/{bias}/charges"][:] = qs_dark
+            f[f"{device}/dark/{bias}/window"][:] = dark_window
 
         else:
-            dset = f.create_dataset(f"{device_name}/{bias}/n_photons", data=n_q)
-            dset = f.create_dataset(f"{device_name}/{bias}/charges", data=qs)
-            dset = f.create_dataset(f"{device_name}/{bias}/window", data=window)
-            dset = f.create_dataset(f"{device_name}/{bias}/gain", data=gain)
-            dset = f.create_dataset(f"{device_name}/dark/{bias}/charges", data=qs_dark)
-            dset = f.create_dataset(
-                f"{device_name}/dark/{bias}/window", data=dark_window
-            )
+            dset = f.create_dataset(f"{device}/{bias}/n_photons", data=n_q)
+            dset = f.create_dataset(f"{device}/{bias}/charges", data=qs)
+            dset = f.create_dataset(f"{device}/{bias}/window", data=window)
+            dset = f.create_dataset(f"{device}/{bias}/gain", data=gain)
+            dset = f.create_dataset(f"{device}/dark/{bias}/charges", data=qs_dark)
+            dset = f.create_dataset(f"{device}/dark/{bias}/window", data=dark_window)
 
     f.close()
+    lock.release()
 
 
 def calculate_gain(
@@ -419,6 +413,7 @@ def calculate_gain(
     device_name: str,
     qs_light: list,
     qs_dark: list,
+    centroid,
     peak_distance: float,
     fit_width=15,
 ) -> list:
@@ -459,6 +454,13 @@ def calculate_gain(
     plt.yscale("log")
     plt.clf()
 
+    # Find the distance between the first two peaks by chopping off the histogram from the pedestal onward
+    if device_name not in ["reference"]:
+        qs_light_above_pedestal = n[bins[1:] >= centroid + peak_distance]
+        bins_above_pedestal = bins[bins >= centroid + peak_distance]
+        next_peak = bins_above_pedestal[np.argmax(qs_light_above_pedestal)]
+        peak_distance = next_peak - centroid
+
     peaks, peak_locs, amplitudes = guess_peaks_no_width(n, bins, 4, peak_distance)
 
     max_peaks = 3
@@ -485,7 +487,7 @@ def calculate_gain(
         plt.savefig(fig_path, dpi=fig.dpi)
 
     gauss_params, gauss_errors = fit_peaks_no_sigma_guess(
-        n, bins, peaks, peak_locs, amplitudes, fit_width=fit_width[0]
+        n, bins, peaks, peak_locs, amplitudes, fit_width=fit_width
     )
     x = np.linspace(bins[0], bins[-1], NBINS)
 
