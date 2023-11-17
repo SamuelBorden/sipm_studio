@@ -62,6 +62,22 @@ setting_dict = {
                 {"R1": 49.9, "R2": 49.9},
             ],
         },
+        "reference": {
+            "functions": [
+                "trans_amp",
+                "voltage_divider",
+                "non_invert_amp",
+                "invert_amp",
+                "voltage_divider",
+            ],
+            "values": [
+                {"R1": 1.5e3},
+                {"R1": 49.9, "R2": 49.9},
+                {"R1": 680, "R2": 75},
+                {"R1": 750, "R2": 90.9},
+                {"R1": 49.9, "R2": 49.9},
+            ],
+        },
     },
     "v_range": {"sipm": 2, "apd": 0.5},
 }
@@ -102,6 +118,7 @@ def compute_sipm_amp() -> float:
 
 apd_amp = _compute_amplification(setting_dict, "apd")
 sipm_amp = _compute_amplification(setting_dict, "sipm")
+reference_amp = _compute_amplification(setting_dict, "reference")
 sipm_amp_1st_stage = _compute_amplification(setting_dict, "sipm_1st")
 sipm_amp_1st_stage_low_gain = _compute_amplification(setting_dict, "sipm_1st_low_gain")
 sipm_amp_low_gain = _compute_amplification(setting_dict, "sipm_low_gain")

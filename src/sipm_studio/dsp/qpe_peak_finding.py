@@ -184,3 +184,24 @@ def fit_peak(
         gauss_params.append(coeffs)
         gauss_errors.append(np.sqrt(np.diag(covs)))
     return gauss_params, gauss_errors
+
+
+def fit_peaks_no_sigma_guess(n, bins, peaks, peak_locs, amplitudes, fit_width=15):
+    gauss_params = []
+    gauss_errors = []
+    bin_centers = (bins[1:] + bins[:-1]) / 2
+    sigma_guess = (np.amax(bins)) / 10
+    for i, peak in enumerate(peaks):
+        left = peak - fit_width
+        right = peak + fit_width
+        if left < 0:
+            left = 0
+        coeffs, covs = curve_fit(
+            gaussian,
+            bin_centers[left:right],
+            n[left:right],
+            p0=[amplitudes[i], peak_locs[i], sigma_guess],
+        )
+        gauss_params.append(coeffs)
+        gauss_errors.append(np.sqrt(np.diag(covs)))
+    return gauss_params, gauss_errors
