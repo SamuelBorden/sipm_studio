@@ -31,7 +31,7 @@ def gaussian(x: np.array, A: float, mu: float, sigma: float) -> np.array:
 
 def guess_peaks(
     n: np.array, bins: np.array, min_height: float, min_dist: float, min_width: float
-) -> tuple[np.array, np.array, np.array]:
+):
     """
     Routine for guessing the location of peaks in a charge spectrum. Uses `scipy`'s `find_peaks` with height, distance, and width parameters.
 
@@ -59,7 +59,7 @@ def guess_peaks(
 
 def guess_peaks_no_width(
     n: np.array, bins: np.array, min_height: float, min_dist: float
-) -> tuple[np.array, np.array, np.array]:
+):
     """
     Routine for guessing the location of peaks in a charge spectrum. Uses `scipy`'s `find_peaks` with height and distance parameters.
 
@@ -87,7 +87,7 @@ def fit_peaks(
     peak_locs: np.array,
     amplitudes: np.array,
     fit_width: float = 15,
-) -> tuple[np.array, np.array]:
+):
     """
     Routine for fitting identified peaks in a charge spectrum with a Gaussian function.
 
@@ -140,7 +140,7 @@ def fit_peak(
     peak_locs: np.array,
     amplitudes: np.array,
     fit_width: float = 15,
-) -> tuple[np.array, np.array]:
+):
     """
     fit one peak only, used in light analysis. Routine for fitting identified peaks in a charge spectrum with a Gaussian function.
 

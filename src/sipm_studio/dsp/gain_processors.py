@@ -11,9 +11,7 @@ from uncertainties.umath import *
 e_charge = 1.6e-19
 
 
-def normalize_charge(
-    charges: np.array, peak_locs: np.array, peak_errors: np.array
-) -> tuple[float, np.array, float]:
+def normalize_charge(charges: np.array, peak_locs: np.array, peak_errors: np.array):
     """
     Given an array of charges, return the gain, normalized charges, or, number of photoelectrons, and the gain error
 

@@ -9,7 +9,7 @@ from sipm_studio.util.parse_compass_filename import parse_compass_file_name
 import copy
 
 
-def parse_gain_json(json_file_name: str) -> list[list, ...]:
+def parse_gain_json(json_file_name: str):
     """
     Parse a config file defined specifically for the gain measurement script
 
@@ -95,7 +95,7 @@ def parse_gain_json(json_file_name: str) -> list[list, ...]:
     return out_args
 
 
-def parse_light_json(json_file_name: str) -> list[list, ...]:
+def parse_light_json(json_file_name: str):
     """
     Parse a config file defined specifically for the light/photon rate measurement script
 
@@ -209,7 +209,7 @@ def parse_light_json(json_file_name: str) -> list[list, ...]:
     return out_args
 
 
-def parse_pde_json(json_file_name: str) -> list:
+def parse_pde_json(json_file_name: str):
     """
     Parse a config file defined specifically for the light/photon rate measurement script
 

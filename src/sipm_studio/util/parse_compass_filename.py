@@ -6,7 +6,7 @@ t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdb
 from datetime import datetime
 
 
-def parse_compass_file_name(file_name: str) -> tuple[str, int, float]:
+def parse_compass_file_name(file_name: str):
     """
     Reads in a CoMPASS file name and returns the date, channel number, and sipm bias
 

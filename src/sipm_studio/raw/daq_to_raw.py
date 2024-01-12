@@ -41,7 +41,7 @@ import multiprocessing as mp
 #     files = files_2
 
 
-def get_event_size(t0_file: str) -> tuple[int, bool]:
+def get_event_size(t0_file: str):
     """
     Get the length of the waveforms in the CoMPASS file, and also tell if the binary files is a CoMPASS2.0 file or not.
 
@@ -80,7 +80,7 @@ def get_event_size(t0_file: str) -> tuple[int, bool]:
         return 24 + 2 * num_samples, False  # number of bytes / 2
 
 
-def get_event(event_data_bytes: bytes) -> tuple:
+def get_event(event_data_bytes: bytes):
     """
     Decodes an event packet. Get all info associated with a waveform in CoMPASS 1.0, return it in an array
 
@@ -108,7 +108,7 @@ def get_event(event_data_bytes: bytes) -> tuple:
     )
 
 
-def get_event_v2(event_data_bytes: bytes) -> tuple:
+def get_event_v2(event_data_bytes: bytes):
     """
     Decodes an event packet. Get all info associated with a waveform in CoMPASS 2.0, return it in an array.
 
@@ -147,7 +147,7 @@ def _assemble_data_row(
     flags: float,
     num_samples: int,
     waveform: np.array,
-) -> tuple:
+):
     """
     Create an array from the event data.
 
