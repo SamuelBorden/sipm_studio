@@ -8,6 +8,14 @@ import numpy as np
 from sipm_studio.util.parse_compass_filename import parse_compass_file_name
 import copy
 
+# Create a dictionary where the keys are LED wavelengths and the entries are the Broadcom PDE at 5V overvoltage at that wavelength
+PDE_dictionary = {
+    "385": 0.31465195535048572,
+    "470": 0.39543005845997826,
+    "560": 0.2457870367786596,
+    "740": 0.07248118212375473,
+}
+
 
 def parse_gain_json(json_file_name: str):
     """
@@ -211,7 +219,8 @@ def parse_light_json(json_file_name: str):
 
 def parse_pde_json(json_file_name: str):
     """
-    Parse a config file defined specifically for the light/photon rate measurement script
+    Parse a config file defined specifically for the light/photon rate measurement script.
+    Passes the correct reference diode PDE to the calculator based on the input LED wavelength.
 
     Parameters
     ----------
@@ -222,7 +231,7 @@ def parse_pde_json(json_file_name: str):
     Returns
     -------
     out_args
-        List of lists. Each list looks like ["path/to/input/input", bias, device_name, vpp, light_window_start_idx, light_window_end_idx, dark_window_start_idx, dark_window_end_idx, "path/to/output/output.h5"]
+        List of lists. Each list looks like ["path/to/input/input", PDE, bias, device_name, vpp, light_window_start_idx, light_window_end_idx, dark_window_start_idx, dark_window_end_idx, "path/to/output/output.h5"]
 
 
     Notes
@@ -239,6 +248,7 @@ def parse_pde_json(json_file_name: str):
         "input_path": "/path/to/raw/files",
         "output_path": "/path/to/analyzed/data",
         "output_file_name": "light_output_name.h5",
+        "led_wavelength": 385,
         "input_files": [
         {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)", "bias": 54, "device_name": "sipm_1st", "vpp": 0.5, "gain_file": "path/to/gain/file/gain_file.h5", "light_window_start_idx": 50, "light_window_end_idx": 250, "dark_window_start_idx": 4000, "dark_window_end_idx": 4200  },
         {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)", "bias": 54.5, "device_name": "sipm_1st", "vpp": 0.5, "gain_file": "path/to/gain/file/gain_file.h5", "light_window_start_idx": 50, "light_window_end_idx": 250, "dark_window_start_idx": 4000, "dark_window_end_idx": 4200   }
@@ -260,6 +270,9 @@ def parse_pde_json(json_file_name: str):
             "Looks like there is a file here already, let's hope we don't delete anything."
         )
         # raise ValueError("Output file already exists")
+
+    # Grab the PDE based on the input wavelength
+    PDE = PDE_dictionary[str(json_file["led_wavelength"])]
 
     # go through each file, join the paths, check that the names are valid, and then put in a list that can
     # be passed to multiprocessing.pool
@@ -309,6 +322,7 @@ def parse_pde_json(json_file_name: str):
         # Now create a tuple that multiprocessor.pool can take as an input
         out_form = [
             input_file,
+            PDE,
             bias,
             dictionary["device_name"],
             dictionary["vpp"],

@@ -46,10 +46,11 @@ NUM_BINS_FIT = 50
 
 
 NBINS = 2000  # number of bins to make charge histogram from
-KETEK_PDE = 0.2587
-KETEK_PDE_ERROR = 0.2587 * 0  # have a separate error band for the systematic errors...
-BROADCOM_PDE = 0.2457870367786596
-BROADCOM_PDE_ERROR = 0.2457870367786596 * 0
+# KETEK_PDE = 0.2587
+# KETEK_PDE_ERROR = 0.2587 * 0  # have a separate error band for the systematic errors...
+# # BROADCOM_PDE = 0.2457870367786596
+# BROADCOM_PDE_ERROR = 0.2457870367786596 * 0
+PDE_ERROR = 0
 e_charge = 1.6e-19
 
 SAVE_SUPERPULSE = False
@@ -58,6 +59,7 @@ SAVE_GAIN_PLOTS = True
 
 def calculate_pulse_pde(
     input_file: str,
+    PDE: float,
     bias: float,
     device_name: str,
     vpp: float,
@@ -77,6 +79,8 @@ def calculate_pulse_pde(
     ----------
     input_file
         A raw-tier CoMPASS file that contains `raw/waveforms` and `raw/baselines` as keys
+    PDE
+        The PDE of the reference diode used for converting data
     bias
         The bias the SiPM was set at during the run
     device_name
@@ -337,9 +341,9 @@ def calculate_pulse_pde(
     print(N_gamma)
 
     if device_name == "reference":
-        n_photons = N_gamma[0] / BROADCOM_PDE
+        n_photons = N_gamma[0] / PDE
         n_photons_u = n_photons * np.sqrt(
-            (N_gamma[1] / N_gamma[0]) ** 2 + (BROADCOM_PDE_ERROR / BROADCOM_PDE) ** 2
+            (N_gamma[1] / N_gamma[0]) ** 2 + (PDE_ERROR / PDE) ** 2
         )
         n_q = np.array([n_photons, n_photons_u])
 
