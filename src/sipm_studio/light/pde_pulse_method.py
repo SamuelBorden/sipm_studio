@@ -627,11 +627,6 @@ def calculate_photons(
     In order to prevent biasing from correlated noise, the number of events in the pedestal can be used to determine the
     mean number of photons. If the detected light is assumed to be Poissonian, then the probability of detecting 0 photons is
     P(0) = e^(-N), so we can find N = -log(N_pedestal/N_counted)
-
-    Ideas
-    -----
-    Maybe want to just take the midpoint between 0p.e. and 1p.e. to accommodate for different sigma sizes due to different
-    amplifier response functions
     """
     sigma_cutoff = std_cut  # this gets like 99% of events in the pedestal, as long as it doesn't overlap with 1p.e.
 

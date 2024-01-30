@@ -18,3 +18,12 @@ sipm\_studio.light.light module
    :undoc-members:
    :show-inheritance:
    :private-members:
+
+sipm\_studio.light.pde\_pulse\_method module
+--------------------------------------------
+
+.. automodule:: sipm_studio.light.pde_pulse_method
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :private-members:

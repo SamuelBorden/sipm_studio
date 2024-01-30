@@ -37,6 +37,15 @@ sipm\_studio.dsp.current\_to\_charge module
    :show-inheritance:
    :private-members:
 
+sipm\_studio.dsp.find\_baseline module
+--------------------------------------
+
+.. automodule:: sipm_studio.dsp.find_baseline
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :private-members:
+
 sipm\_studio.dsp.gain\_processors module
 ----------------------------------------
 

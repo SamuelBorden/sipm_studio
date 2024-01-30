@@ -13,6 +13,7 @@ Click on any of the following to learn more about sipm_studio
    tutorials
    Package API reference <api/modules>
    developer
+   manuals/index
 
 
 
