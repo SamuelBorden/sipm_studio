@@ -22,13 +22,13 @@ BL_HIST_MIN_HEIGHT = 100  # minimum height in the bl slope histogram to look for
 BL_HIST_MIN_DISTANCE = (
     50  # minimum distance in the bl slope histogram to look for peaks
 )
-BL_HIST_FIT_WIDTH = 100  # width of the peak in the bl slope histogram to fit
+BL_HIST_FIT_WIDTH = 10  # width of the peak in the bl slope histogram to fit
 
 INTERCEPT_HIST_MIN_HEIGHT = 9  # height of the peak in the intercept histogram to fit
 INTERCEPT_HIST_MIN_DISTANCE = (
     0.3e-5  # minimum distance in the intercept histogram to fit
 )
-INTERCEPT_HIST_FIT_WIDTH = 300  # width of the peak in the intercept histogram to fit
+INTERCEPT_HIST_FIT_WIDTH = 30  # width of the peak in the intercept histogram to fit
 
 
 def find_bl(wfs_in: np.array, bl_idx: int) -> np.array:

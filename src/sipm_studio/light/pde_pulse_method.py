@@ -30,6 +30,7 @@ from sipm_studio.dsp.gain_processors import (
 from sipm_studio.dsp.charge_to_photons import sipm_photons, apd_photons
 
 import argparse
+from scipy.ndimage import gaussian_filter1d
 
 # Set up some global variables so that automatic Gaussian fitting can work properly
 
@@ -53,7 +54,10 @@ NBINS = 2000  # number of bins to make charge histogram from
 PDE_ERROR = 0
 e_charge = 1.6e-19
 
+GAUSSIAN_FILTERED_QPE_THRESHOLD = 1
+
 SAVE_SUPERPULSE = False
+SAVE_INITIAL_GUESS = True
 SAVE_GAIN_PLOTS = True
 
 
@@ -199,6 +203,60 @@ def calculate_pulse_pde(
     if False:
         plt.savefig(fig_path, dpi=fig.dpi)
 
+    # Find the location of the tallest peak and rough distance to next peak by taking derivatives
+    # ----------------------------------------------------------------------------------------------------------------------------
+
+    light_max_idx = np.argmax(n)
+    dark_max_idx = np.argmax(n_dark)
+    light_inflection_flag = True
+    dark_inflection_flag = True
+
+    # First smooth the derivative of the QPE with a Gaussian filter, find the index of when the maximum peak crosses 0 again
+    # Use this index as a hold off to look for the next time the QPE derivative crosses a threshold
+    # The threshold crossing index is used as the distance between peaks, and half of its value is the fit width for each peak
+    diffs = np.diff(n)
+    diffs = gaussian_filter1d(diffs, 5)
+    offset_idx = zero_crosser(diffs, np.argmax(diffs))
+    light_next_peak_idx = thresh_crosser(
+        diffs,
+        a_threshold_in=GAUSSIAN_FILTERED_QPE_THRESHOLD,
+        t_start_in=2 * offset_idx - np.argmax(diffs),
+    )
+    light_pedestal_fit_width = int((light_next_peak_idx - light_max_idx) // 2.1)
+    light_peak_distance = light_next_peak_idx - light_max_idx
+
+    # If no threshold crossings were found, or if the distance between peaks is negative, or if the threshold crossing is too close to the maximum value
+    # use the default bin width to fit
+    if (
+        (light_next_peak_idx == 0)
+        or (light_peak_distance < 0)
+        or (light_peak_distance < 2 * offset_idx - np.argmax(diffs))
+    ):
+        light_inflection_flag = False
+        light_pedestal_fit_width = NUM_BINS_FIT
+
+    # Do the same for the dark peaks
+    diffs = np.diff(n_dark)
+    diffs = gaussian_filter1d(diffs, 5)
+    offset_idx = zero_crosser(diffs, np.argmax(diffs))
+    dark_next_peak_idx = thresh_crosser(
+        diffs,
+        a_threshold_in=GAUSSIAN_FILTERED_QPE_THRESHOLD,
+        t_start_in=2 * offset_idx - np.argmax(diffs),
+    )
+    dark_pedestal_fit_width = int((dark_next_peak_idx - dark_max_idx) // 2.1)
+    dark_peak_distance = dark_next_peak_idx - dark_max_idx
+
+    if (
+        (dark_next_peak_idx == 0)
+        or (dark_peak_distance < 0)
+        or (dark_peak_distance < 2 * offset_idx - np.argmax(diffs))
+    ):
+        dark_inflection_flag = False
+        dark_pedestal_fit_width = NUM_BINS_FIT
+
+    # Try finding the pedestal and fitting it so as to seed eventual fit parameters for the whole charge spectrum
+    # ----------------------------------------------------------------------------------------------------------------------------
     try:
         peaks, peak_locs, amplitudes = guess_peaks_no_width(
             n, bins, LIGHT_QPE_HEIGHT, LIGHT_QPE_WIDTH
@@ -222,7 +280,7 @@ def calculate_pulse_pde(
     # Fit with a Gaussian
     try:
         gauss_params, gauss_errors = fit_peak(
-            n, bins, peaks, peak_locs, amplitudes, fit_width=NUM_BINS_FIT
+            n, bins, peaks, peak_locs, amplitudes, fit_width=light_pedestal_fit_width
         )
 
         gauss_params_dark, gauss_errors_dark = fit_peak(
@@ -231,19 +289,26 @@ def calculate_pulse_pde(
             peaks_dark,
             peak_locs_dark,
             amplitudes_dark,
-            fit_width=NUM_BINS_FIT,
+            fit_width=dark_pedestal_fit_width,
         )
 
     except:
-        raise ValueError("Peak Fitting Routine Failed.")
+        raise ValueError(
+            f"Peak Fitting Routine Failed. {dark_pedestal_fit_width} and {light_pedestal_fit_width} used as fit width"
+        )
 
     # Save the Gaussian fits for visual inspection
     x = np.linspace(bins[0], bins[-1], NBINS)
+    x_dark = np.linspace(bins_dark[0], bins_dark[-1], NBINS)
 
     fig = plt.figure(figsize=(12, 8))
     for i, params in enumerate(gauss_params):
         plt.plot(x, gaussian(x, *params))
-    n, bins, patches = plt.hist(qs, bins=NBINS)
+    n, bins, patches = plt.hist(
+        qs,
+        bins=NBINS,
+        label=f"{light_pedestal_fit_width} bins fit, {light_peak_distance} distance",
+    )
     n, bins, patches = plt.hist(qs, bins=NBINS, histtype="stepfilled", alpha=0.5)
     plt.xlabel("Integrated Charge (C)")
     plt.ylabel("Counts")
@@ -257,8 +322,12 @@ def calculate_pulse_pde(
 
     fig = plt.figure(figsize=(12, 8))
     for i, params in enumerate(gauss_params_dark):
-        plt.plot(x, gaussian(x, *params))
-    n_dark, bins_dark, patches_dark = plt.hist(qs_dark, bins=NBINS)
+        plt.plot(x_dark, gaussian(x_dark, *params))
+    n_dark, bins_dark, patches_dark = plt.hist(
+        qs_dark,
+        bins=NBINS,
+        label=f"{dark_pedestal_fit_width} bins fit, {dark_peak_distance} distance",
+    )
     n_dark, bins_dark, patches_dark = plt.hist(
         qs_dark, bins=NBINS, histtype="stepfilled", alpha=0.5
     )
@@ -295,6 +364,9 @@ def calculate_pulse_pde(
     bin_width = bins[1] - bins[0]
     fit_width = int(2.355 * centroid_std[0] / bin_width)  # fit the FWHM of the pedestal
 
+    if not light_inflection_flag:
+        light_peak_distance = 2.355 * 2 * centroid_std[0]
+
     if device_name not in ["reference"]:
         gain = calculate_gain(
             out_path,
@@ -303,20 +375,27 @@ def calculate_pulse_pde(
             qs,
             qs_dark,
             centroid[0],
-            2.355 * 2 * centroid_std[0],
+            light_peak_distance * bin_width,
             fit_width,
         )
         print(gain)
 
     # Use this block if the reference diode is changing bias voltage, like for calculating the gain of the reference diode
     #     else:
-    #         gain = calculate_gain(out_path, bias, device_name, qs, qs_dark, centroid[0], 2.355*6*centroid_std[0], fit_width)
+    #         gain = calculate_gain(out_path, bias, device_name, qs, qs_dark, centroid[0], light_peak_distance*bin_width, fit_width)
     #         print(gain)
 
     # good if the reference diode is fixed
     else:
         gain = calculate_gain(
-            out_path, bias, device_name, qs, qs_dark, centroid[0], 0.5e-12, fit_width
+            out_path,
+            bias,
+            device_name,
+            qs,
+            qs_dark,
+            centroid[0],
+            light_peak_distance * bin_width,
+            fit_width,
         )
         print(gain)
 
@@ -676,3 +755,76 @@ def calculate_photons(
     print("Light Photons", np.log(1 / f_light))
 
     return np.array([N_gamma, N_gamma_u])
+
+
+def thresh_crosser(w_in, a_threshold_in, t_start_in):
+    """
+    Find the index where the waveform value crosses 0 after crossing the threshold.
+    Useful for finding pileup events with the CR-RC^2 filter. Or for finding the next peak
+    in the derivative of a QPE spectrum.
+
+    Parameters
+    ----------
+    w_in
+        the input waveform.
+    a_threshold_in
+        the threshold value.
+    t_start_in
+        the starting index.
+
+    Returns
+    -------
+    t_trig_times_out
+        the first index where the waveform value has crossed the threshold and returned to 0.
+    """
+    # prepare output
+    t_trig_times_out = 0
+
+    # Check everything is ok
+    if np.isnan(w_in).any() or np.isnan(a_threshold_in) or np.isnan(t_start_in):
+        return
+
+    # Perform the processing
+    is_above_thresh = False
+    for i in range(int(t_start_in), len(w_in) - 1, 1):
+        if w_in[i] <= a_threshold_in < w_in[i + 1]:
+            is_above_thresh = True
+        if is_above_thresh and (w_in[i] >= 0 > w_in[i + 1]):
+            t_trig_times_out = i
+            is_above_thresh = False
+            break
+    return t_trig_times_out
+
+
+def zero_crosser(w_in, t_start_in):
+    """
+    Find the index where the waveform value crosses 0.
+    Useful for finding pileup events with the CR-RC^2 filter.
+
+    Parameters
+    ----------
+    w_in
+        the input waveform.
+    t_start_in
+        the starting index.
+
+    Returns
+    -------
+    t_trig_times_out
+        the first index where the waveform value has crossed the threshold and returned to 0.
+    """
+    # prepare output
+    t_trig_times_out = 0
+
+    # Check everything is ok
+    if np.isnan(w_in).any() or np.isnan(t_start_in):
+        return
+
+    # Perform the processing
+    is_above_thresh = False
+    for i in range(int(t_start_in), len(w_in) - 1, 1):
+        if w_in[i] >= 0 > w_in[i + 1]:
+            is_above_thresh = True
+            t_trig_times_out = i
+            break
+    return t_trig_times_out

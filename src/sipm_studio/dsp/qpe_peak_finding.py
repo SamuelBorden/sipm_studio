@@ -170,6 +170,7 @@ def fit_peak(
     gauss_errors = []
     bin_centers = (bins[1:] + bins[:-1]) / 2
     sigma_guess = bins[np.argmax(n)] - bins[0]
+    sigma_guess = fit_width * (bins[1] - bins[0])
     for i, peak in enumerate(peaks):
         left = peak - fit_width
         right = peak + fit_width
@@ -191,6 +192,7 @@ def fit_peaks_no_sigma_guess(n, bins, peaks, peak_locs, amplitudes, fit_width=15
     gauss_errors = []
     bin_centers = (bins[1:] + bins[:-1]) / 2
     sigma_guess = (np.amax(bins)) / 10
+    sigma_guess = fit_width * (bins[1] - bins[0])
     for i, peak in enumerate(peaks):
         left = peak - fit_width
         right = peak + fit_width
