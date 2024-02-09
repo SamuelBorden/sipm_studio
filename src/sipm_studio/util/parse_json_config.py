@@ -7,6 +7,7 @@ import os, json, h5py
 import numpy as np
 from sipm_studio.util.parse_compass_filename import parse_compass_file_name
 import copy
+import glob
 
 # Create a dictionary where the keys are LED wavelengths and the entries are the Broadcom PDE at 5V overvoltage at that wavelength
 PDE_dictionary = {
@@ -336,3 +337,56 @@ def parse_pde_json(json_file_name: str):
         out_args.append(out_form)
 
     return out_args
+
+
+def parse_raw_json_config(json_file_name: str) -> list:
+    """
+    Parse a config file defined specifically for processing DAQ files to the raw stage
+
+    Parameters
+    ----------
+    json_file_name
+        Path to a json file containing parameters used for using :func:`build_raw`
+
+
+    Returns
+    -------
+    out_args
+        List of lists. Each list looks like ["path/to/input/input/file.BIN", "path/to/output/output/folder"]
+
+
+
+    JSON Configuration Example
+    --------------------------
+
+    .. code-block :: json
+
+        {
+        "input_path": "/path/to/daq/files",
+        "output_path": "/path/to/raw/data",
+        }
+    """
+    f = open(json_file_name)
+    json_file = json.load(f)
+    f.close()
+
+    # make the output directory if we need to
+    if not os.path.exists(json_file["output_path"]):
+        os.mkdir(json_file["output_path"])
+
+    # Check to make sure there are DAQ binary files that are available to process
+    files = glob.glob(json_file["input_path"] + "/*.bin")
+    files_2 = glob.glob(json_file["input_path"] + "/*.BIN")
+
+    if len(files) == 0:
+        if len(files_2) == 0:
+            raise ValueError(
+                f'No valid binary DAQ files found at {json_file["input_path"]}'
+            )
+        else:
+            files = files_2
+
+    # Now zip together all of the files and the output paths
+    output_path_array = np.full(len(files), json_file["output_path"])
+
+    return list(zip(files, output_path_array))

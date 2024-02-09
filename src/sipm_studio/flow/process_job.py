@@ -16,8 +16,9 @@ import h5py
 import multiprocessing as mp
 import json
 
-from sipm_studio.util import parse_json_config
+from sipm_studio.util import parse_json_config, parse_raw_json_config
 from sipm_studio.light import pde_pulse_method
+from sipm_studio.raw import daq_to_raw
 
 
 # Setup the argument parser
@@ -56,4 +57,13 @@ if __name__ == "__main__":
         # launch the parallel processes
         with mp.Pool(proc_count) as p:
             p.starmap(pde_pulse_method.calculate_pulse_pde, args)
+        print("exited gracefully.")
+
+    if proc_stage == "build_raw":
+        args = parse_json_config.parse_raw_json_config(proc_input)
+        print(args)
+
+        # launch the parallel processes
+        with mp.Pool(proc_count) as p:
+            p.starmap(daq_to_raw.build_raw, args)
         print("exited gracefully.")

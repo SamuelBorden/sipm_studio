@@ -5,7 +5,12 @@ import h5py
 import copy
 import json
 
-from sipm_studio.util.parse_json_config import parse_gain_json, parse_light_json
+from sipm_studio.util.parse_json_config import (
+    parse_gain_json,
+    parse_light_json,
+    parse_raw_json_config,
+    parse_pde_json,
+)
 
 
 gain_config = {
@@ -51,7 +56,6 @@ def test_parse_gain_json(tmp_path):
     good_config["output_path"] = str(d)
 
     json_to_write = json.dumps(good_config)
-    print(json_to_write)
     with open(f"{str(d)}/gain_specs.json", "w") as outfile:
         outfile.write(json_to_write)
 
@@ -177,3 +181,75 @@ def test_parse_light_json(tmp_path):
 
     assert exc_info.type is ValueError
     assert exc_info.value.args[0] == "Output file already exists"
+
+
+def test_parse_raw_json_config(tmp_path):
+    d = tmp_path / "raw_parse_test"
+    d.mkdir()
+
+    # make the input files so that we can assure everything works as intended
+    f = d / "t1_Data_CH0@DT5730_1463_ketek_dark_rt_03-10-2023_apd_150V_sipm_545dv.BIN"
+    f.touch()
+
+    f2 = d / "t1_Data_CH1@DT5730_1463_ketek_dark_rt_03-10-2023_apd_150V_sipm_545dv.BIN"
+    f2.touch()
+
+    config_dict = dict({"input_path": f"{d}", "output_path": f"{d}"})
+
+    json_to_write = json.dumps(config_dict)
+    with open(f"{str(d)}/process_raw.json", "w") as outfile:
+        outfile.write(json_to_write)
+
+    out_files = parse_raw_json_config(f"{str(d)}/process_raw.json")
+
+    assert out_files[0] == (f"{f2}", f"{d}")
+    assert out_files[1] == (f"{f}", f"{d}")
+
+
+def test_parse_pde_json_config(tmp_path):
+    d = tmp_path / "pde_parse_test"
+    d.mkdir()
+
+    # make the input files so that we can assure everything works as intended
+    f = d / "t1_Data_CH0@DT5730_1463_ketek_dark_rt_03-10-2023_apd_150V_sipm_545dv.h5"
+    f.touch()
+
+    output_name = d / "pde_test.h5"
+
+    config_dict = dict(
+        {
+            "input_path": f"{d}",
+            "output_path": f"{d}",
+            "output_file_name": "pde_test.h5",
+            "led_wavelength": 560,
+            "input_files": [
+                {
+                    "file": "t1_Data_CH0@DT5730_1463_ketek_dark_rt_03-10-2023_apd_150V_sipm_545dv.h5",
+                    "bias": 54.5,
+                    "device_name": "sipm",
+                    "vpp": 0.5,
+                    "light_window_start_idx": 10,
+                    "light_window_end_idx": 100,
+                    "dark_window_start_idx": 11,
+                    "dark_window_end_idx": 101,
+                }
+            ],
+        }
+    )
+
+    json_to_write = json.dumps(config_dict)
+    with open(f"{str(d)}/process_raw.json", "w") as outfile:
+        outfile.write(json_to_write)
+
+    out_array = parse_pde_json(f"{str(d)}/process_raw.json")[0]
+
+    assert out_array[0] == f"{f}"
+    assert out_array[1] == 0.2457870367786596
+    assert out_array[2] == 54.5
+    assert out_array[3] == "sipm"
+    assert out_array[4] == 0.5
+    assert out_array[5] == 10
+    assert out_array[6] == 100
+    assert out_array[7] == 11
+    assert out_array[8] == 101
+    assert out_array[9] == f"{output_name}"

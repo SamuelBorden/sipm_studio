@@ -9,9 +9,8 @@ from sipm_studio.raw.daq_to_raw import (
     get_event_size,
     get_event,
     get_event_v2,
-    _assemble_data_row,
     _output_to_h5file,
-    process_metadata,
+    build_raw,
 )
 
 test_file = Path(__file__).parent / "compass_test_data.BIN"
@@ -53,23 +52,6 @@ def test_get_event_v2():
     assert np.array_equal(info_array, [97876200000, 798, 135, 16384])
 
 
-def test_assemble_data_row():
-    board = 0
-    channel = 2
-    timestamp = 130405
-    energy = 10
-    energy_short = 1
-    flags = 111
-    num_samples = 2025
-    waveform = np.array([1, 2, 3, 4])
-    info_array, out_waveform = _assemble_data_row(
-        board, channel, timestamp, energy, energy_short, flags, num_samples, waveform
-    )
-
-    assert np.array_equal(info_array, [timestamp, energy, energy_short, flags])
-    assert np.array_equal(out_waveform, waveform)
-
-
 def test_output_to_h5file(tmp_path):
 
     d = tmp_path / "daq_to_raw_test"
@@ -92,11 +74,10 @@ def test_output_to_h5file(tmp_path):
     waveform = np.array([1, 2, 3, 4])
     baselines = np.array([0, 0, 0, 0])
 
-    events, out_waveforms = _assemble_data_row(
-        board, channel, timestamp, energy, energy_short, flags, num_samples, waveform
-    )
+    events = np.array([timestamp, energy, energy_short, flags])
+    out_waveforms = waveform
 
-    _output_to_h5file("bogus", file_name, d, events, out_waveforms, baselines)
+    _output_to_h5file(file_name, d, events, out_waveforms, baselines)
 
     with h5py.File(f, "r") as output_file:
         times = output_file["/raw/timetag"][()]
@@ -112,7 +93,7 @@ def test_output_to_h5file(tmp_path):
     assert np.array_equal(bls, baselines)
 
 
-def test_process_metadata(tmp_path):
+def test_build_raw(tmp_path):
     d = tmp_path / "daq_to_raw_test"
     d.mkdir()
 
@@ -121,7 +102,7 @@ def test_process_metadata(tmp_path):
     f = d / "t1_compass_test_data.BIN.h5"
     f.touch()
 
-    process_metadata(test_file, d)
+    build_raw(test_file, d)
 
     with h5py.File(f, "r") as output_file:
         times = output_file["/raw/timetag"][:1]
