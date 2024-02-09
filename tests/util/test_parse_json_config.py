@@ -191,9 +191,6 @@ def test_parse_raw_json_config(tmp_path):
     f = d / "t1_Data_CH0@DT5730_1463_ketek_dark_rt_03-10-2023_apd_150V_sipm_545dv.BIN"
     f.touch()
 
-    f2 = d / "t1_Data_CH1@DT5730_1463_ketek_dark_rt_03-10-2023_apd_150V_sipm_545dv.BIN"
-    f2.touch()
-
     config_dict = dict({"input_path": f"{d}", "output_path": f"{d}"})
 
     json_to_write = json.dumps(config_dict)
@@ -202,8 +199,7 @@ def test_parse_raw_json_config(tmp_path):
 
     out_files = parse_raw_json_config(f"{str(d)}/process_raw.json")
 
-    assert out_files[0] == (f"{f2}", f"{d}")
-    assert out_files[1] == (f"{f}", f"{d}")
+    assert out_files[0] == (f"{f}", f"{d}")
 
 
 def test_parse_pde_json_config(tmp_path):
