@@ -365,7 +365,7 @@ def calculate_pulse_pde(
     fit_width = int(2.355 * centroid_std[0] / bin_width)  # fit the FWHM of the pedestal
 
     if not light_inflection_flag:
-        light_peak_distance = 2.355 * 2 * centroid_std[0]
+        light_peak_distance = 2.355 * 2 * centroid_std[0] / bin_width
 
     if device_name not in ["reference"]:
         gain = calculate_gain(
@@ -546,8 +546,12 @@ def calculate_gain(
 
     peaks, peak_locs, amplitudes = guess_peaks_no_width(n, bins, 4, peak_distance)
 
-    max_peaks = 3
-    #     max_peaks = 2 # Used if there aren't enough peaks as in the case of dark LN data sometimes due to signal degradation from afterpulsing
+    if len(peaks) == 2:
+        max_peaks = 2
+    else:
+        max_peaks = 3
+    # max_peaks = 3
+    # #     max_peaks = 2 # Used if there aren't enough peaks as in the case of dark LN data sometimes due to signal degradation from afterpulsing
 
     peaks = peaks[:max_peaks]
     peak_locs = peak_locs[:max_peaks]
@@ -653,14 +657,16 @@ def calculate_gain(
         plt.clf()
         fig = plt.figure(figsize=(12, 8))
         plt.hist(
-            (qs_light - centroid[0]) / (my_gainer[0]) / e_charge, range=(0, 4), bins=500
+            (qs_light - centroid[0]) / (my_gainer[0]) / e_charge,
+            range=(-1, 5),
+            bins=NBINS,
         )
         plt.yscale("log")
         plt.axvline(x=0)
         plt.axvline(x=1)
         plt.axvline(x=2)
         plt.title("Normalized Spectrum")
-        plt.xlim([-1, 3])
+        plt.xlim([-1, 5])
         plt.show()
 
     return np.array(my_gainer)
