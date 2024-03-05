@@ -16,7 +16,7 @@ import h5py
 import multiprocessing as mp
 import json
 
-from sipm_studio.util import parse_json_config, parse_raw_json_config
+from sipm_studio.util import parse_json_config
 from sipm_studio.light import pde_pulse_method
 from sipm_studio.raw import daq_to_raw
 
