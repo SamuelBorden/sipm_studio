@@ -54,6 +54,7 @@ NBINS = 2000  # number of bins to make charge histogram from
 PDE_ERROR = 0
 e_charge = 1.6e-19
 
+NUM_SIGMA_AWAY = 3
 GAUSSIAN_FILTERED_QPE_THRESHOLD = 1
 
 SAVE_SUPERPULSE = False
@@ -206,8 +207,6 @@ def calculate_pulse_pde(
     # Find the location of the tallest peak and rough distance to next peak by taking derivatives
     # ----------------------------------------------------------------------------------------------------------------------------
 
-    light_max_idx = np.argmax(n)
-    dark_max_idx = np.argmax(n_dark)
     light_inflection_flag = True
     dark_inflection_flag = True
 
@@ -216,21 +215,22 @@ def calculate_pulse_pde(
     # The threshold crossing index is used as the distance between peaks, and half of its value is the fit width for each peak
     diffs = np.diff(n)
     diffs = gaussian_filter1d(diffs, 5)
+    light_max_idx = np.argmax(diffs)
     offset_idx = zero_crosser(diffs, np.argmax(diffs))
     light_next_peak_idx = thresh_crosser(
         diffs,
         a_threshold_in=GAUSSIAN_FILTERED_QPE_THRESHOLD,
         t_start_in=2 * offset_idx - np.argmax(diffs),
     )
-    light_pedestal_fit_width = int((light_next_peak_idx - light_max_idx) // 2.1)
-    light_peak_distance = light_next_peak_idx - light_max_idx
+    light_pedestal_fit_width = int((light_next_peak_idx - light_max_idx) // 2.2)
+    light_peak_distance = light_next_peak_idx - offset_idx
 
     # If no threshold crossings were found, or if the distance between peaks is negative, or if the threshold crossing is too close to the maximum value
     # use the default bin width to fit
     if (
         (light_next_peak_idx == 0)
         or (light_peak_distance < 0)
-        or (light_peak_distance < 2 * offset_idx - np.argmax(diffs))
+        or (light_peak_distance < 2 * (offset_idx - np.argmax(diffs)))
     ):
         light_inflection_flag = False
         light_pedestal_fit_width = NUM_BINS_FIT
@@ -238,6 +238,7 @@ def calculate_pulse_pde(
     # Do the same for the dark peaks
     diffs = np.diff(n_dark)
     diffs = gaussian_filter1d(diffs, 5)
+    dark_max_idx = np.argmax(diffs)
     offset_idx = zero_crosser(diffs, np.argmax(diffs))
     dark_next_peak_idx = thresh_crosser(
         diffs,
@@ -365,39 +366,19 @@ def calculate_pulse_pde(
     fit_width = int(2.355 * centroid_std[0] / bin_width)  # fit the FWHM of the pedestal
 
     if not light_inflection_flag:
-        light_peak_distance = 2.355 * 2 * centroid_std[0] / bin_width
+        light_peak_distance = 2.355 * NUM_SIGMA_AWAY * centroid_std[0] / bin_width
 
-    if device_name not in ["reference"]:
-        gain = calculate_gain(
-            out_path,
-            bias,
-            device_name,
-            qs,
-            qs_dark,
-            centroid[0],
-            light_peak_distance * bin_width,
-            fit_width,
-        )
-        print(gain)
-
-    # Use this block if the reference diode is changing bias voltage, like for calculating the gain of the reference diode
-    #     else:
-    #         gain = calculate_gain(out_path, bias, device_name, qs, qs_dark, centroid[0], light_peak_distance*bin_width, fit_width)
-    #         print(gain)
-
-    # good if the reference diode is fixed
-    else:
-        gain = calculate_gain(
-            out_path,
-            bias,
-            device_name,
-            qs,
-            qs_dark,
-            centroid[0],
-            light_peak_distance * bin_width,
-            fit_width,
-        )
-        print(gain)
+    gain = calculate_gain(
+        out_path,
+        bias,
+        device_name,
+        qs,
+        qs_dark,
+        centroid[0],
+        light_peak_distance * bin_width,
+        fit_width,
+    )
+    print(gain)
 
     # Normalize the charge distributions
     qs_normal = (qs - centroid) / gain[0] / e_charge
@@ -537,12 +518,12 @@ def calculate_gain(
     plt.yscale("log")
     plt.clf()
 
-    # Find the distance between the first two peaks by chopping off the histogram from the pedestal onward
-    if device_name not in ["reference"]:
-        qs_light_above_pedestal = n[bins[1:] >= centroid + peak_distance]
-        bins_above_pedestal = bins[bins >= centroid + peak_distance]
-        next_peak = bins_above_pedestal[np.argmax(qs_light_above_pedestal)]
-        peak_distance = next_peak - centroid
+    # # Find the distance between the first two peaks by chopping off the histogram from the pedestal onward
+    # if device_name not in ["reference"]:
+    #     qs_light_above_pedestal = n[bins[1:] >= centroid + peak_distance]
+    #     bins_above_pedestal = bins[bins >= centroid + peak_distance]
+    #     next_peak = bins_above_pedestal[np.argmax(qs_light_above_pedestal)]
+    #     peak_distance = next_peak - centroid
 
     peaks, peak_locs, amplitudes = guess_peaks_no_width(n, bins, 4, peak_distance)
 
