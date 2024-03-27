@@ -54,12 +54,10 @@ NBINS = 2000  # number of bins to make charge histogram from
 PDE_ERROR = 0
 e_charge = 1.6e-19
 
-NUM_SIGMA_AWAY = 3
+NUM_SIGMA_AWAY = 5
 GAUSSIAN_FILTERED_QPE_THRESHOLD = 1
 
 SAVE_SUPERPULSE = False
-SAVE_INITIAL_GUESS = True
-SAVE_GAIN_PLOTS = True
 
 
 def calculate_pulse_pde(
@@ -136,10 +134,14 @@ def calculate_pulse_pde(
 
     window = [light_window_start_idx, light_window_end_idx]
     dark_window = [dark_window_start_idx, dark_window_end_idx]
+    fig, axs = plt.subplots(
+        3, 3, figsize=(14, 10)
+    )  # create the figure that will hold our subplots
+    fig.suptitle(str(bias) + "V " + str(device_name))
 
     if SAVE_SUPERPULSE:
         print("saving figure of light window")
-        fig = plt.figure(figsize=(12, 8))
+        fig2 = plt.figure(figsize=(12, 8))
         plt.plot(np.mean(c_wfs, axis=0))
         plt.title(f"Average {device_name} Waveform")
         plt.axvline(x=window[0])
@@ -158,7 +160,7 @@ def calculate_pulse_pde(
         plt.savefig(fig_path, dpi=fig.dpi)
 
         print("saving figure of dark window")
-        fig = plt.figure(figsize=(12, 8))
+        fig2 = plt.figure(figsize=(12, 8))
         plt.plot(np.mean(c_wfs, axis=0))
         plt.title(f"Average {device_name} Waveform")
         plt.axvline(x=dark_window[0])
@@ -182,27 +184,23 @@ def calculate_pulse_pde(
     # Histogram and peak find the pedestal in light counts so as to seed gain fit
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    fig = plt.figure(figsize=(12, 8))
-    n, bins, patches = plt.hist(qs, bins=NBINS, histtype="step")
-    n, bins, patches = plt.hist(qs, bins=NBINS, histtype="stepfilled", alpha=0.15)
-    plt.xlabel("Integrated Charge (C)")
-    plt.ylabel("Counts")
-    plt.yscale("log")
-    fig_path = out_path + "/light_qpe_" + str(bias) + "_" + str(device_name) + ".png"
-    if False:
-        plt.savefig(fig_path, dpi=fig.dpi)
+    n, bins, patches = axs[0, 0].hist(qs, bins=NBINS, histtype="step")
+    n, bins, patches = axs[0, 0].hist(qs, bins=NBINS, histtype="stepfilled", alpha=0.15)
+    axs[0, 0].set_xlabel("Integrated Charge (C)")
+    axs[0, 0].set_ylabel("Counts")
+    axs[0, 0].set_yscale("log")
+    axs[0, 0].set_title("Light QPE")
 
-    fig = plt.figure(figsize=(12, 8))
-    n_dark, bins_dark, patches_dark = plt.hist(qs_dark, bins=NBINS, histtype="step")
-    n_dark, bins_dark, patches_dark = plt.hist(
+    n_dark, bins_dark, patches_dark = axs[1, 0].hist(
+        qs_dark, bins=NBINS, histtype="step"
+    )
+    n_dark, bins_dark, patches_dark = axs[1, 0].hist(
         qs_dark, bins=NBINS, histtype="stepfilled", alpha=0.15
     )
-    plt.xlabel("Integrated Charge (C)")
-    plt.ylabel("Counts")
-    plt.yscale("log")
-    fig_path = out_path + "/dark_qpe_" + str(bias) + "_" + str(device_name) + ".png"
-    if False:
-        plt.savefig(fig_path, dpi=fig.dpi)
+    axs[1, 0].set_xlabel("Integrated Charge (C)")
+    axs[1, 0].set_ylabel("Counts")
+    axs[1, 0].set_yscale("log")
+    axs[1, 0].set_title("Dark QPE")
 
     # Find the location of the tallest peak and rough distance to next peak by taking derivatives
     # ----------------------------------------------------------------------------------------------------------------------------
@@ -302,45 +300,37 @@ def calculate_pulse_pde(
     x = np.linspace(bins[0], bins[-1], NBINS)
     x_dark = np.linspace(bins_dark[0], bins_dark[-1], NBINS)
 
-    fig = plt.figure(figsize=(12, 8))
     for i, params in enumerate(gauss_params):
-        plt.plot(x, gaussian(x, *params))
-    n, bins, patches = plt.hist(
+        axs[0, 1].plot(x, gaussian(x, *params))
+    n, bins, patches = axs[0, 1].hist(
         qs,
         bins=NBINS,
         label=f"{light_pedestal_fit_width} bins fit, {light_peak_distance} distance",
     )
-    n, bins, patches = plt.hist(qs, bins=NBINS, histtype="stepfilled", alpha=0.5)
-    plt.xlabel("Integrated Charge (C)")
-    plt.ylabel("Counts")
-    plt.ylim(1, np.amax(n))
-    plt.yscale("log")
-    plt.title(f"Histogram of Light Charges for {bias}V in {device_name}")
-    fig_path = (
-        out_path + "/light_fit_histogram_" + str(bias) + "_" + str(device_name) + ".png"
-    )
-    plt.savefig(fig_path, dpi=fig.dpi)
+    n, bins, patches = axs[0, 1].hist(qs, bins=NBINS, histtype="stepfilled", alpha=0.5)
+    axs[0, 1].set_xlabel("Integrated Charge (C)")
+    axs[0, 1].set_ylabel("Counts")
+    axs[0, 1].set_ylim(1, np.amax(n))
+    axs[0, 1].set_yscale("log")
+    axs[0, 1].set_title(f"Light QPE Pedestal Fit")
+    axs[0, 1].legend()
 
-    fig = plt.figure(figsize=(12, 8))
     for i, params in enumerate(gauss_params_dark):
-        plt.plot(x_dark, gaussian(x_dark, *params))
-    n_dark, bins_dark, patches_dark = plt.hist(
+        axs[1, 1].plot(x_dark, gaussian(x_dark, *params))
+    n_dark, bins_dark, patches_dark = axs[1, 1].hist(
         qs_dark,
         bins=NBINS,
         label=f"{dark_pedestal_fit_width} bins fit, {dark_peak_distance} distance",
     )
-    n_dark, bins_dark, patches_dark = plt.hist(
+    n_dark, bins_dark, patches_dark = axs[1, 1].hist(
         qs_dark, bins=NBINS, histtype="stepfilled", alpha=0.5
     )
-    plt.xlabel("Integrated Charge (C)")
-    plt.ylabel("Counts")
-    plt.ylim(1, np.amax(n_dark))
-    plt.yscale("log")
-    plt.title(f"Histogram of Dark Charges for {bias}V in {device_name}")
-    fig_path = (
-        out_path + "/dark_fit_histogram_" + str(bias) + "_" + str(device_name) + ".png"
-    )
-    plt.savefig(fig_path, dpi=fig.dpi)
+    axs[1, 1].set_xlabel("Integrated Charge (C)")
+    axs[1, 1].set_ylabel("Counts")
+    axs[1, 1].set_ylim(1, np.amax(n_dark))
+    axs[1, 1].set_yscale("log")
+    axs[1, 1].set_title("Dark QPE Pedestal Fit")
+    axs[1, 1].legend()
 
     # Expand the gaussian parameters into their own arrays
     centroid = []
@@ -377,6 +367,7 @@ def calculate_pulse_pde(
         centroid[0],
         light_peak_distance * bin_width,
         fit_width,
+        axs,
     )
     print(gain)
 
@@ -396,7 +387,8 @@ def calculate_pulse_pde(
         0,
         NPE_CUT,
         0,
-        std_cut=3,
+        3,
+        axs,
     )
     print(N_gamma)
 
@@ -415,6 +407,12 @@ def calculate_pulse_pde(
 
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     # Save it all to a file
+    fig_path = (
+        out_path + "/monitoring_plots_" + str(bias) + "_" + str(device_name) + ".png"
+    )
+    fig.tight_layout()
+    fig.savefig(fig_path, dpi=fig.dpi)
+
     lock.acquire()
     f = h5py.File(output_file, "a")
 
@@ -480,6 +478,7 @@ def calculate_gain(
     centroid,
     peak_distance: float,
     fit_width=15,
+    axs=None,
 ) -> list:
     """
     Parameters
@@ -500,6 +499,8 @@ def calculate_gain(
         The numbers of standard deviations to sum the area under the pedestal Gaussian
     peak_distance
         The distance between peaks in the dark spectrum to calculate gain
+    axs
+        A `matplotlib.pyplot` axes object to hold the output plots
 
 
     Returns
@@ -538,50 +539,34 @@ def calculate_gain(
     peak_locs = peak_locs[:max_peaks]
     amplitudes = amplitudes[:max_peaks]
 
-    fig = plt.figure(figsize=(12, 8))
-    n, bins, patches = plt.hist(qs_light, bins=NBINS, histtype="step")
-    n, bins, patches = plt.hist(qs_light, bins=NBINS, histtype="stepfilled", alpha=0.15)
+    n, bins, patches = axs[2, 0].hist(qs_light, bins=NBINS, histtype="step")
+    n, bins, patches = axs[2, 0].hist(
+        qs_light, bins=NBINS, histtype="stepfilled", alpha=0.15
+    )
 
-    if SAVE_GAIN_PLOTS:
-        plt.scatter(peak_locs, amplitudes)
-        plt.title("Charge Spectrum Under Illumination")
-        plt.xlabel("Integrated Charge (C)")
-        plt.ylabel("Counts")
-        plt.yscale("log")
-        plt.show()
-        fig_path = (
-            out_path + "/light_qpe_peaks_" + str(bias) + "_" + str(device_name) + ".png"
-        )
-        plt.savefig(fig_path, dpi=fig.dpi)
+    axs[2, 0].scatter(peak_locs, amplitudes)
+    axs[2, 0].set_title("Light QPE Peaks Found")
+    axs[2, 0].set_xlabel("Integrated Charge (C)")
+    axs[2, 0].set_ylabel("Counts")
+    axs[2, 0].set_yscale("log")
 
     gauss_params, gauss_errors = fit_peaks_no_sigma_guess(
         n, bins, peaks, peak_locs, amplitudes, fit_width=fit_width
     )
     x = np.linspace(bins[0], bins[-1], NBINS)
 
-    if SAVE_GAIN_PLOTS:
-        fig = plt.figure(figsize=(12, 8))
-        for i, params in enumerate(gauss_params):
-            plt.plot(x, gaussian(x, *params))
-        n, bins, patches = plt.hist(qs_light, bins=NBINS)
-        n, bins, patches = plt.hist(
-            qs_light, bins=NBINS, histtype="stepfilled", alpha=0.5
-        )
-        plt.xlabel("Integrated Charge (C)")
-        plt.ylabel("Counts")
-        plt.ylim(1, np.amax(n))
-        plt.grid(True)
-        plt.title("Charge Histogram Under Illumination")
-        plt.yscale("log")
-        fig_path = (
-            out_path
-            + "/light_qpe_peaks_fit_"
-            + str(bias)
-            + "_"
-            + str(device_name)
-            + ".png"
-        )
-        plt.savefig(fig_path, dpi=fig.dpi)
+    for i, params in enumerate(gauss_params):
+        axs[2, 1].plot(x, gaussian(x, *params))
+    n, bins, patches = axs[2, 1].hist(qs_light, bins=NBINS)
+    n, bins, patches = axs[2, 1].hist(
+        qs_light, bins=NBINS, histtype="stepfilled", alpha=0.5
+    )
+    axs[2, 1].set_xlabel("Integrated Charge (C)")
+    axs[2, 1].set_ylabel("Counts")
+    axs[2, 1].set_ylim(1, np.amax(n))
+    axs[2, 1].grid(True)
+    axs[2, 1].set_title("Light QPE Peaks Fit")
+    axs[2, 1].set_yscale("log")
 
     # Do the actual gain calculation
     qs_light = np.array(qs_light)
@@ -596,33 +581,21 @@ def calculate_gain(
             qs_light, centroid, centroid_err
         )
 
-        if SAVE_GAIN_PLOTS:
-            fig = plt.figure(figsize=(12, 8))
-            plt.hist(n_qs, bins=NBINS, alpha=0.5)
+        axs[2, 2].hist(n_qs, bins=NBINS, alpha=0.5)
 
-            plt.axvline(x=0)
-            plt.axvline(x=1)
-            plt.axvline(x=2)
-            plt.axvline(x=3)
-            plt.axvline(x=4)
-            plt.axvline(x=5)
-            plt.axvline(x=6)
+        axs[2, 2].axvline(x=0)
+        axs[2, 2].axvline(x=1)
+        axs[2, 2].axvline(x=2)
+        axs[2, 2].axvline(x=3)
+        axs[2, 2].axvline(x=4)
+        axs[2, 2].axvline(x=5)
+        axs[2, 2].axvline(x=6)
 
-            plt.yscale("log")
-            plt.xlim([-1, 5])
-            plt.xlabel("N.P.E.")
-            plt.ylabel("Counts")
-            plt.title("Normalized Charge Spectrum")
-
-            fig_path = (
-                out_path
-                + "/light_qpe_normalized_"
-                + str(bias)
-                + "_"
-                + str(device_name)
-                + ".png"
-            )
-            plt.savefig(fig_path, dpi=fig.dpi)
+        axs[2, 2].set_yscale("log")
+        axs[2, 2].set_xlim([-1, 5])
+        axs[2, 2].set_xlabel("N.P.E.")
+        axs[2, 2].set_ylabel("Counts")
+        axs[2, 2].set_title("Normalized Light Charge Spectrum")
 
         nick_gain = [nick_gain, nick_gain_u]
         print(np.array(nick_gain) / 1e6)
@@ -636,19 +609,17 @@ def calculate_gain(
 
     if max_peaks == 2:
         plt.clf()
-        fig = plt.figure(figsize=(12, 8))
-        plt.hist(
+        axs[2, 2].hist(
             (qs_light - centroid[0]) / (my_gainer[0]) / e_charge,
             range=(-1, 5),
             bins=NBINS,
         )
-        plt.yscale("log")
-        plt.axvline(x=0)
-        plt.axvline(x=1)
-        plt.axvline(x=2)
-        plt.title("Normalized Spectrum")
-        plt.xlim([-1, 5])
-        plt.show()
+        axs[2, 2].set_yscale("log")
+        axs[2, 2].axvline(x=0)
+        axs[2, 2].axvline(x=1)
+        axs[2, 2].axvline(x=2)
+        axs[2, 2].set_title("Normalized Light Charge Spectrum")
+        axs[2, 2].set_xlim([-1, 5])
 
     return np.array(my_gainer)
 
@@ -664,6 +635,7 @@ def calculate_photons(
     pedestal_dark: float,
     pedestal_dark_std: float,
     std_cut: int,
+    axs=None,
 ) -> list:
     """
     Parameters
@@ -682,6 +654,8 @@ def calculate_photons(
         The width of the pedestal in dark conditions, in Coulombs
     std_cut
         The number of standard deviations to sum up the Gaussian fit to the peak
+    axs
+        A `matplotlib.pyplot` axes object to hold the output plots
 
     Returns
     -------
@@ -696,39 +670,21 @@ def calculate_photons(
     """
     sigma_cutoff = std_cut  # this gets like 99% of events in the pedestal, as long as it doesn't overlap with 1p.e.
 
-    if SAVE_GAIN_PLOTS:
-        fig = plt.figure(figsize=(12, 8))
-        n, bins, _ = plt.hist(qs_light, bins=500)
-        plt.axvline(x=pedestal_light + sigma_cutoff * pedestal_light_std)
-        plt.yscale("log")
-        plt.title("Light Distribution")
-        fig_path = (
-            out_path
-            + "/light_qpe_photons_"
-            + str(bias)
-            + "_"
-            + str(device_name)
-            + ".png"
-        )
-        plt.savefig(fig_path, dpi=fig.dpi)
+    n, bins, _ = axs[0, 2].hist(qs_light, bins=500)
+    axs[0, 2].axvline(x=pedestal_light + sigma_cutoff * pedestal_light_std)
+    axs[0, 2].set_yscale("log")
+    axs[0, 2].set_xlabel("Number of Photoelectrons")
+    axs[0, 2].set_ylabel("Counts")
+    axs[0, 2].set_title("Light Photon Distribution")
 
     N_light = qs_light[qs_light < pedestal_light + sigma_cutoff * pedestal_light_std]
 
-    if SAVE_GAIN_PLOTS:
-        fig = plt.figure(figsize=(12, 8))
-        n, bins, _ = plt.hist(qs_dark, bins=500)
-        plt.axvline(x=pedestal_dark + sigma_cutoff * pedestal_dark_std)
-        plt.yscale("log")
-        plt.title("Dark Distribution")
-        fig_path = (
-            out_path
-            + "/dark_qpe_photons_"
-            + str(bias)
-            + "_"
-            + str(device_name)
-            + ".png"
-        )
-        plt.savefig(fig_path, dpi=fig.dpi)
+    n, bins, _ = axs[1, 2].hist(qs_dark, bins=500)
+    axs[1, 2].axvline(x=pedestal_dark + sigma_cutoff * pedestal_dark_std)
+    axs[1, 2].set_yscale("log")
+    axs[1, 2].set_xlabel("Number of Photoelectrons")
+    axs[1, 2].set_ylabel("Counts")
+    axs[1, 2].set_title("Dark Photon Distribution")
 
     N_dark = qs_dark[qs_dark < pedestal_dark + sigma_cutoff * pedestal_dark_std]
 
