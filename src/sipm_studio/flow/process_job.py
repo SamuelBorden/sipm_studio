@@ -19,6 +19,7 @@ import json
 from sipm_studio.util import parse_json_config
 from sipm_studio.light import pde_pulse_method
 from sipm_studio.raw import daq_to_raw
+from sipm_studio.dark import dark_processors
 
 
 # Setup the argument parser
@@ -56,7 +57,7 @@ if __name__ == "__main__":
 
         # launch the parallel processes
         with mp.Pool(proc_count) as p:
-            p.starmap(pde_pulse_method.calculate_pulse_pde, args)
+            p.starmap(pde_pulse_method.calculate_pulse_pde, args, chunksize=1)
         print("exited gracefully.")
 
     if proc_stage == "build_raw":
@@ -65,5 +66,19 @@ if __name__ == "__main__":
 
         # launch the parallel processes
         with mp.Pool(proc_count) as p:
-            p.starmap(daq_to_raw.build_raw, args)
+            p.starmap(daq_to_raw.build_raw, args, chunksize=1)
+        print("exited gracefully.")
+
+    if proc_stage == "dark":
+        args = parse_json_config.parse_dark_json_config(proc_input)
+        print(args)
+
+        m = mp.Manager()
+        l = m.Lock()
+
+        args = [[*arg, l] for arg in args]  # pass the lock?
+
+        # launch the parallel processes
+        with mp.Pool(proc_count) as p:
+            p.starmap(dark_processors.run_dark, args, chunksize=1)
         print("exited gracefully.")

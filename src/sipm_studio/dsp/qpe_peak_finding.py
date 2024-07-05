@@ -207,3 +207,39 @@ def fit_peaks_no_sigma_guess(n, bins, peaks, peak_locs, amplitudes, fit_width=15
         gauss_params.append(coeffs)
         gauss_errors.append(np.sqrt(np.diag(covs)))
     return gauss_params, gauss_errors
+
+
+def tallest_peak_loc_sigma(bins, counts):
+    """
+    Finds the tallest peak in a histogram and finds its FWHM by walking off the peak, then converts to sigma
+
+    Parameters
+    ----------
+    bins
+        The bin locations
+    counts
+        The number of counts per bin
+
+    Returns
+    -------
+    peak_location and sigma, in units and not numbers of bins
+
+    Note
+    ----
+    The number of bins must be equal in size to the number of counts
+
+    """
+    peak_loc = bins[np.argmax(counts)]
+
+    FWHM = 0
+
+    for i in range(np.argmax(counts), len(counts) - 1):
+        if counts[i] >= np.amax(counts) / 2 > counts[i + 1]:
+            FWHM = 2 * (bins[i] - peak_loc)
+        else:
+            pass
+
+    if not FWHM:
+        raise ValueError("Could not find a peak or a sigma!")
+    else:
+        return peak_loc, FWHM / 2.355

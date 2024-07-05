@@ -9,6 +9,7 @@ from sipm_studio.dsp.qpe_peak_finding import (
     fit_peak,
     gaussian,
     guess_peaks_no_width,
+    tallest_peak_loc_sigma,
 )
 
 # define physical constants
@@ -59,16 +60,14 @@ def find_bl(wfs_in: np.array, bl_idx: int) -> np.array:
     n, bins, _ = plt.hist(bl_slopes, bins=200)
     plt.clf()
 
-    # guess and fit the 0 slope peak
-    peaks, peak_locs, amplitudes = guess_peaks_no_width(
-        n, bins, BL_HIST_MIN_HEIGHT, BL_HIST_MIN_DISTANCE
-    )
-    peaks = peaks[:1]
-    peak_locs = peak_locs[:1]
-    amplitudes = amplitudes[:1]
+    peak, sigma = tallest_peak_loc_sigma(bins, n)
+    peaks = np.array([np.argmax(n)])
+    peak_locs = np.array([peak])
+    amplitudes = np.array([np.amax(n)])
+    sigma = int(sigma / (bins[1] - bins[0]))  # convert to units of bins
 
     gauss_params, gauss_errors = fit_peak(
-        n, bins, peaks, peak_locs, amplitudes, fit_width=BL_HIST_FIT_WIDTH
+        n, bins, peaks, peak_locs, amplitudes, fit_width=sigma
     )
 
     x = np.linspace(bins[0], bins[-1], 500)
@@ -98,16 +97,14 @@ def find_bl(wfs_in: np.array, bl_idx: int) -> np.array:
     plt.clf()
 
     # guess and fit the baseline peak
-    peaks, peak_locs, amplitudes = guess_peaks_no_width(
-        n, bins, INTERCEPT_HIST_MIN_HEIGHT, INTERCEPT_HIST_MIN_DISTANCE
-    )
-
-    peaks = peaks[:2]
-    peak_locs = peak_locs[:2]
-    amplitudes = amplitudes[:2]
+    peak, sigma = tallest_peak_loc_sigma(bins, n)
+    peaks = np.array([np.argmax(n)])
+    peak_locs = np.array([peak])
+    amplitudes = np.array([np.amax(n)])
+    sigma = int(sigma / (bins[1] - bins[0]))  # convert to units of bins
 
     gauss_params, gauss_errors = fit_peak(
-        n, bins, peaks, peak_locs, amplitudes, fit_width=INTERCEPT_HIST_FIT_WIDTH
+        n, bins, peaks, peak_locs, amplitudes, fit_width=sigma
     )
 
     x = np.linspace(bins[0], bins[-1], 500)
@@ -130,33 +127,8 @@ def find_bl(wfs_in: np.array, bl_idx: int) -> np.array:
         avg_bl_2 = gauss_params[1][1]
         bl_std_2 = np.abs(gauss_params[1][2])
 
-    # This code is used in the case of processing LN data where there is very little baseline jitter
-    # std_cut = 3
-    # if device in ["sipm", "sipm_mini", "sipm_1st"]:
-    # if False:
-    #     bls = []
-    #     for x in wfs_in:
-    #         bls.append(np.full_like(x,np.mean(x[:bl_idx])))
-    # #             bls.append(np.full_like(x,bl))
-
-    #     wf_bl = np.array(wfs_in)-np.array(bls)
-
-    # else:
-    #     bls = []
-    #     for x in wfs_in:
-    #         bl = np.min([np.mean(x[:bl_idx]), np.mean(x[-bl_idx:])])
-    #         if (bl >= avg_bl + std_cut*bl_std) or (bl <= avg_bl - std_cut*bl_std):
-    #             noisy_counts += 1
-    #             bls.append(np.full_like(x,avg_bl))
-
-    #         else:
-    # #             bls.append(np.full_like(x,avg_bl_2))
-    #             bls.append(np.full_like(x,bl))
-
     ## Try subtracting off the average baseline and see what happens
     wf_bl = np.array(wfs_in) - avg_bl
-    #     wf_bl = np.array(wfs_in)- np.array(bls)
-    ## what happens if we don't even do baseline subtraction
-    # wf_bl = np.array(wfs_in)
+
     wf_bl = np.array(wf_bl)
     return wf_bl

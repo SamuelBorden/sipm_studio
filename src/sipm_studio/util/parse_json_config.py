@@ -390,3 +390,82 @@ def parse_raw_json_config(json_file_name: str) -> list:
     output_path_array = np.full(len(files), json_file["output_path"])
 
     return list(zip(files, output_path_array))
+
+
+def parse_dark_json_config(json_file_name: str):
+    """
+    Parse a config file defined specifically for the dark characterization script.
+
+    Parameters
+    ----------
+    json_file_name
+        Path to a json file containing parameters used for performing dark analysis
+
+
+    Returns
+    -------
+    out_args
+        List of lists. Each list looks like ["path/to/input/input", bias, device_name, vpp, temperature, "path/to/output/output.h5"]
+
+
+    JSON Configuration Example
+    --------------------------
+
+    .. code-block :: json
+
+        {
+        "input_path": "/path/to/raw/files",
+        "output_path": "/path/to/analyzed/data",
+        "output_file_name": "light_output_name.h5",
+        "temperature": "LN",
+        "input_files": [
+        {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)", "bias": 54, "device_name": "broadcom", "vpp": 0.5, "gain_file": "path/to/gain/file/gain_file.h5"},
+        {"file": "t1_Data_Channel@DT5730_1463_devicename_dark/light/_rt/ln_MONTH/DAY/YEAR_apd_apdbiasinvolts_sipm_sipmbiasindecivolt_(optional LED info)", "bias": 54.5, "device_name": "broadcom", "vpp": 0.5, "gain_file": "path/to/gain/file/gain_file.h5"}
+        ],
+        }
+    """
+    f = open(json_file_name)
+    json_file = json.load(f)
+    f.close()
+    # make the output directory if we need to
+    if not os.path.exists(json_file["output_path"]):
+        os.mkdir(json_file["output_path"])
+
+    # make sure we don't override an existing analysis
+    if os.path.exists(
+        os.path.join(json_file["output_path"], json_file["output_file_name"])
+    ):
+        print(
+            "Looks like there is a file here already, let's hope we don't delete anything."
+        )
+        # raise ValueError("Output file already exists")
+
+    # go through each file, join the paths, check that the names are valid, and then put in a list that can
+    # be passed to multiprocessing.pool
+
+    temperature = json_file["temperature"]
+
+    out_args = []
+    for dictionary in json_file["input_files"]:
+        input_file = os.path.join(json_file["input_path"], dictionary["file"])
+        output_file = os.path.join(
+            json_file["output_path"], json_file["output_file_name"]
+        )
+
+        # Check that the file is valid
+        if not os.path.exists(input_file):
+            raise ValueError("Input file not found")
+
+        # Now create a tuple that multiprocessor.pool can take as an input
+        out_form = [
+            input_file,
+            dictionary["bias"],
+            dictionary["device_name"],
+            dictionary["vpp"],
+            temperature,
+            output_file,
+        ]
+
+        out_args.append(out_form)
+
+    return out_args

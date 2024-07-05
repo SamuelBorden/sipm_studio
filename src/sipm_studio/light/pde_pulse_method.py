@@ -17,6 +17,7 @@ from sipm_studio.dsp.qpe_peak_finding import (
     guess_peaks_no_width,
     fit_peak,
     fit_peaks_no_sigma_guess,
+    tallest_peak_loc_sigma,
 )
 from sipm_studio.dsp.current_to_charge import (
     integrate_current,
@@ -223,16 +224,6 @@ def calculate_pulse_pde(
     light_pedestal_fit_width = int((light_next_peak_idx - light_max_idx) // 2.2)
     light_peak_distance = light_next_peak_idx - offset_idx
 
-    # If no threshold crossings were found, or if the distance between peaks is negative, or if the threshold crossing is too close to the maximum value
-    # use the default bin width to fit
-    if (
-        (light_next_peak_idx == 0)
-        or (light_peak_distance < 0)
-        or (light_peak_distance < 2 * (offset_idx - np.argmax(diffs)))
-    ):
-        light_inflection_flag = False
-        light_pedestal_fit_width = NUM_BINS_FIT
-
     # Do the same for the dark peaks
     diffs = np.diff(n_dark)
     diffs = gaussian_filter1d(diffs, 5)
@@ -246,35 +237,42 @@ def calculate_pulse_pde(
     dark_pedestal_fit_width = int((dark_next_peak_idx - dark_max_idx) // 2.1)
     dark_peak_distance = dark_next_peak_idx - dark_max_idx
 
+    # Try finding the tallest peak and fitting it so as to seed eventual fit parameters for the whole charge spectrum
+    # ----------------------------------------------------------------------------------------------------------------------------
+    try:
+        peak, sigma = tallest_peak_loc_sigma(bins, n)
+        peaks = np.array([np.argmax(n)])
+        peak_locs = np.array([peak])
+        amplitudes = np.array([np.amax(n)])
+        sigma = int(sigma / (bins[1] - bins[0]))  # convert to units of bins
+        print("Found light peaks")
+
+        peak_dark, sigma_dark = tallest_peak_loc_sigma(bins_dark, n_dark)
+        peaks_dark = np.array([np.argmax(n_dark)])
+        peak_locs_dark = np.array([peak_dark])
+        amplitudes_dark = np.array([np.amax(n_dark)])
+        sigma_dark = int(sigma_dark / (bins[1] - bins[0]))  # convert to units of bins
+
+    except:
+        raise ValueError("Peak Finding failed")
+
+    # If no threshold crossings were found, or if the distance between peaks is negative, or if the threshold crossing is too close to the maximum value
+    # use the default bin width to fit
+    if (
+        (light_next_peak_idx == 0)
+        or (light_peak_distance < 0)
+        or (light_peak_distance < 2 * (offset_idx - np.argmax(diffs)))
+    ):
+        light_inflection_flag = False
+        light_pedestal_fit_width = sigma
+
     if (
         (dark_next_peak_idx == 0)
         or (dark_peak_distance < 0)
         or (dark_peak_distance < 2 * offset_idx - np.argmax(diffs))
     ):
         dark_inflection_flag = False
-        dark_pedestal_fit_width = NUM_BINS_FIT
-
-    # Try finding the pedestal and fitting it so as to seed eventual fit parameters for the whole charge spectrum
-    # ----------------------------------------------------------------------------------------------------------------------------
-    try:
-        peaks, peak_locs, amplitudes = guess_peaks_no_width(
-            n, bins, LIGHT_QPE_HEIGHT, LIGHT_QPE_WIDTH
-        )
-        print("Found light peaks")
-
-        peaks_dark, peak_locs_dark, amplitudes_dark = guess_peaks_no_width(
-            n_dark, bins_dark, DARK_QPE_HEIGHT, DARK_QPE_WIDTH
-        )
-        # only care about the location of the pedestal
-        peaks = peaks[:1]
-        peak_locs = peak_locs[:1]
-        amplitudes = amplitudes[:1]
-
-        peaks_dark = peaks_dark[:1]
-        peak_locs_dark = peak_locs_dark[:1]
-        amplitudes_dark = amplitudes_dark[:1]
-    except:
-        raise ValueError("Peak Finding failed")
+        dark_pedestal_fit_width = sigma_dark
 
     # Fit with a Gaussian
     try:

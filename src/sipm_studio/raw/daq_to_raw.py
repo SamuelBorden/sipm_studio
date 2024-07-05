@@ -193,7 +193,10 @@ def build_raw(file_path: str, output_path: str) -> None:
             # Decode
             while event_data_bytes != b"":
                 event, waveform = get_event_v2(event_data_bytes)
-                baseline = peakutils.baseline(waveform)
+                # baseline = peakutils.baseline(waveform)
+                baseline = np.mean(
+                    waveform[:10]
+                )  # NOTE: This needs to be adjusted for whatever use case
                 event_rows.append(event)
                 waveform_rows.append(waveform)
                 baseline_rows.append(baseline)
@@ -214,7 +217,10 @@ def build_raw(file_path: str, output_path: str) -> None:
             # Decode
             while event_data_bytes != b"":
                 event, waveform = get_event(event_data_bytes)
-                baseline = peakutils.baseline(waveform)
+                # baseline = peakutils.baseline(waveform)
+                baseline = np.mean(
+                    waveform[:10]
+                )  # NOTE: This needs to be adjusted for whatever use case
                 event_rows.append(event)
                 waveform_rows.append(waveform)
                 baseline_rows.append(baseline)
