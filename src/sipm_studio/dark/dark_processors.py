@@ -149,11 +149,8 @@ def otte_DCR(scaled_waves, scaled_heights):
         for height in x:
             if height > 0.4:
                 count += 1
-    print(len(scaled_waves))
-    print(len(scaled_waves[0]))
-    return count / (len(scaled_waves) * len(scaled_waves[0]) * time_per_sample)
 
-    print(otte_DCR(scaled_waves, my_heights) / 1000)
+    return count / (len(scaled_waves) * len(scaled_waves[0]) * time_per_sample)
 
 
 def hamamatsu_dcr(norm_q_max_tensor, wf_length_time):
@@ -885,12 +882,8 @@ def run_dark(
     )
 
     dcr = otte_DCR(c_wfs, norm_q_array)
-    print(dcr)
 
     dcr = hamamatsu_dcr(norm_q_array, wf_length_time=10000 * 2e-9)
-    print(dcr)
-    print(rate, error)
-    print(error)
 
     dcr = rate
     dcr_err = error

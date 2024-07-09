@@ -248,6 +248,7 @@ def parse_pde_json(json_file_name: str):
         {
         "input_path": "/path/to/raw/files",
         "output_path": "/path/to/analyzed/data",
+        "temperature": "LN",
         "output_file_name": "light_output_name.h5",
         "led_wavelength": 385,
         "input_files": [
@@ -274,6 +275,8 @@ def parse_pde_json(json_file_name: str):
 
     # Grab the PDE based on the input wavelength
     PDE = PDE_dictionary[str(json_file["led_wavelength"])]
+
+    temperature = str(json_file["temperature"])
 
     # go through each file, join the paths, check that the names are valid, and then put in a list that can
     # be passed to multiprocessing.pool
@@ -323,6 +326,7 @@ def parse_pde_json(json_file_name: str):
         # Now create a tuple that multiprocessor.pool can take as an input
         out_form = [
             input_file,
+            temperature,
             PDE,
             bias,
             dictionary["device_name"],

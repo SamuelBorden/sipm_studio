@@ -63,6 +63,7 @@ SAVE_SUPERPULSE = False
 
 def calculate_pulse_pde(
     input_file: str,
+    temperature: str,
     PDE: float,
     bias: float,
     device_name: str,
@@ -83,6 +84,8 @@ def calculate_pulse_pde(
     ----------
     input_file
         A raw-tier CoMPASS file that contains `raw/waveforms` and `raw/baselines` as keys
+    temperature
+        RT or LN. If LN, then only 2 peaks are fit to accommodate the high AP rates. If RT, it will attempt to fit 3 peaks
     PDE
         The PDE of the reference diode used for converting data
     bias
@@ -127,7 +130,13 @@ def calculate_pulse_pde(
     # Calculate the baseline
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     print("Performing baseline routine")
-    wf_bl = find_bl(waveformies, bl_idx)
+
+    try:
+        wf_bl = find_bl(waveformies, bl_idx)
+    except:
+        raise ValueError(
+            f"{bias}, {device_name} something wrong in baseline estimation"
+        )
 
     # Integrate over the windows provided
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -216,26 +225,51 @@ def calculate_pulse_pde(
     diffs = gaussian_filter1d(diffs, 5)
     light_max_idx = np.argmax(diffs)
     offset_idx = zero_crosser(diffs, np.argmax(diffs))
-    light_next_peak_idx = thresh_crosser(
+    pol, trig = bi_level_zero_crossing_time_points(
         diffs,
-        a_threshold_in=GAUSSIAN_FILTERED_QPE_THRESHOLD,
-        t_start_in=2 * offset_idx - np.argmax(diffs),
+        GAUSSIAN_FILTERED_QPE_THRESHOLD,
+        -1 * GAUSSIAN_FILTERED_QPE_THRESHOLD,
+        1000,
+        0,
+        np.array([0]),
+        np.zeros(10),
+        np.zeros(10),
     )
-    light_pedestal_fit_width = int((light_next_peak_idx - light_max_idx) // 2.2)
-    light_peak_distance = light_next_peak_idx - offset_idx
+    trig = trig[np.where(~np.isnan(trig))[0]]
+    trig = np.array(trig, dtype=int)
+    if len(trig) == 0:
+        trig = np.array([0, 0])
+    elif len(trig) == 1:
+        trig = np.array([0, trig[0]])
+
+    light_pedestal_fit_width = 2 * (offset_idx - light_max_idx)
+    light_peak_distance = int(np.mean(np.diff(trig)))
 
     # Do the same for the dark peaks
     diffs = np.diff(n_dark)
     diffs = gaussian_filter1d(diffs, 5)
     dark_max_idx = np.argmax(diffs)
     offset_idx = zero_crosser(diffs, np.argmax(diffs))
-    dark_next_peak_idx = thresh_crosser(
+
+    pol, trig = bi_level_zero_crossing_time_points(
         diffs,
-        a_threshold_in=GAUSSIAN_FILTERED_QPE_THRESHOLD,
-        t_start_in=2 * offset_idx - np.argmax(diffs),
+        GAUSSIAN_FILTERED_QPE_THRESHOLD,
+        -1 * GAUSSIAN_FILTERED_QPE_THRESHOLD,
+        1000,
+        0,
+        np.array([0]),
+        np.zeros(10),
+        np.zeros(10),
     )
-    dark_pedestal_fit_width = int((dark_next_peak_idx - dark_max_idx) // 2.1)
-    dark_peak_distance = dark_next_peak_idx - dark_max_idx
+    trig = trig[np.where(~np.isnan(trig))[0]]
+    trig = np.array(trig, dtype=int)
+    if len(trig) == 0:
+        trig = np.array([0, 0])
+    elif len(trig) == 1:
+        trig = np.array([0, trig[0]])
+
+    dark_pedestal_fit_width = 2 * (offset_idx - dark_max_idx)
+    dark_peak_distance = int(np.mean(np.diff(trig)))
 
     # Try finding the tallest peak and fitting it so as to seed eventual fit parameters for the whole charge spectrum
     # ----------------------------------------------------------------------------------------------------------------------------
@@ -251,28 +285,24 @@ def calculate_pulse_pde(
         peaks_dark = np.array([np.argmax(n_dark)])
         peak_locs_dark = np.array([peak_dark])
         amplitudes_dark = np.array([np.amax(n_dark)])
-        sigma_dark = int(sigma_dark / (bins[1] - bins[0]))  # convert to units of bins
+        sigma_dark = int(
+            sigma_dark / (bins_dark[1] - bins_dark[0])
+        )  # convert to units of bins
 
     except:
-        raise ValueError("Peak Finding failed")
+        raise ValueError(f"Peak Finding failed {bias}, {device_name}")
 
     # If no threshold crossings were found, or if the distance between peaks is negative, or if the threshold crossing is too close to the maximum value
     # use the default bin width to fit
-    if (
-        (light_next_peak_idx == 0)
-        or (light_peak_distance < 0)
-        or (light_peak_distance < 2 * (offset_idx - np.argmax(diffs)))
-    ):
-        light_inflection_flag = False
-        light_pedestal_fit_width = sigma
+    if light_peak_distance <= 0:
+        if sigma > 10:  # can't be too small to fit!
+            light_inflection_flag = False
+            light_pedestal_fit_width = sigma
 
-    if (
-        (dark_next_peak_idx == 0)
-        or (dark_peak_distance < 0)
-        or (dark_peak_distance < 2 * offset_idx - np.argmax(diffs))
-    ):
-        dark_inflection_flag = False
-        dark_pedestal_fit_width = sigma_dark
+    if dark_peak_distance <= 0:
+        if sigma_dark > 10:
+            dark_inflection_flag = False
+            dark_pedestal_fit_width = sigma_dark
 
     # Fit with a Gaussian
     try:
@@ -291,7 +321,7 @@ def calculate_pulse_pde(
 
     except:
         raise ValueError(
-            f"Peak Fitting Routine Failed. {dark_pedestal_fit_width} and {light_pedestal_fit_width} used as fit width"
+            f"Peak Fitting Routine Failed. {dark_pedestal_fit_width} and {light_pedestal_fit_width} used as fit width, {bias}, {device_name}, {2 * (offset_idx - light_max_idx)}, {light_inflection_flag}"
         )
 
     # Save the Gaussian fits for visual inspection
@@ -351,18 +381,16 @@ def calculate_pulse_pde(
     # ------------------------------------------------------------------------------------------------------------------------------------------------------
     # Calculate the gain and number of photons
     bin_width = bins[1] - bins[0]
-    fit_width = int(2.355 * centroid_std[0] / bin_width)  # fit the FWHM of the pedestal
+    fit_width = int(2.3 * centroid_std[0] / bin_width)  # fit the FWQM of the pedestal
 
     if not light_inflection_flag:
         light_peak_distance = 2.355 * NUM_SIGMA_AWAY * centroid_std[0] / bin_width
 
     gain = calculate_gain(
-        out_path,
+        temperature,
         bias,
         device_name,
         qs,
-        qs_dark,
-        centroid[0],
         light_peak_distance * bin_width,
         fit_width,
         axs,
@@ -376,7 +404,6 @@ def calculate_pulse_pde(
     # Calculate the number of photons using the pedestal method
     NPE_CUT = 0.5
     N_gamma = calculate_photons(
-        out_path,
         bias,
         device_name,
         qs_normal,
@@ -468,12 +495,10 @@ def calculate_pulse_pde(
 
 
 def calculate_gain(
-    out_path: str,
+    temperature: str,
     bias: float,
     device_name: str,
     qs_light: list,
-    qs_dark: list,
-    centroid,
     peak_distance: float,
     fit_width=15,
     axs=None,
@@ -481,22 +506,19 @@ def calculate_gain(
     """
     Parameters
     ----------
+    temperature
+        RT or LN. If LN, then only 2 peaks are fit to accommodate the high AP rates. If RT, it will attempt to fit 3 peaks
+    bias
+        The bias the SiPM was set at during the run
+    device_name
+        The name of the device this file corresponds to, one of:
+        `sipm`, `sipm_1st`, `sipm_1st_low_gain`, or `apd`
     qs_light
-        Array of integrated waveforms during the light trigger
-    qs_dark
-        Array of integrated waveforms (integrated over the same length window!) under dark conditions
-    pedestal_light
-        The location of the centroid of the pedestal from illumination, in Coulombs
-    pedestal_light_std
-        The width of the pedestal in light conditions, in Coulombs
-    pedestal_dark
-        The location of the centroid of the pedestal from dark conditinos, in Coulombs
-    pedestal_dark_std
-        The width of the pedestal in dark conditions, in Coulombs
-    std_cut
-        The numbers of standard deviations to sum the area under the pedestal Gaussian
+        Array of integrated waveforms that give a QPE spectrum
     peak_distance
-        The distance between peaks in the dark spectrum to calculate gain
+        The distance between peaks in the spectrum to calculate gain
+    fit_width
+        The number of bins to fit around a peak
     axs
         A `matplotlib.pyplot` axes object to hold the output plots
 
@@ -505,6 +527,13 @@ def calculate_gain(
     -------
     Gain
         The gain calculated from the pulsed light spectrum
+
+    Notes
+    -----
+    This function works by first attempting to find peaks with an inter-peak distance of `peak_distance` passed to the function.
+    Then, if more than 1 peak is found, the peaks are fitted. There are stop-gaps to ensure fitting works: if the fit_width is too small,
+    then the distance between the found peaks is used to supplement the fit_width guess. Finally the gain is calculated. If 3 peaks are found,
+    then the slope of the NPE vs Q graph is used; otherwise, the pedestal is subtracted off and the first peak sets the gain.
     """
     # Now calculate the gain from the light histogram
     # It's ok to use the light bc the p.e. peaks don't shift, just relative ratios
@@ -517,21 +546,17 @@ def calculate_gain(
     plt.yscale("log")
     plt.clf()
 
-    # # Find the distance between the first two peaks by chopping off the histogram from the pedestal onward
-    # if device_name not in ["reference"]:
-    #     qs_light_above_pedestal = n[bins[1:] >= centroid + peak_distance]
-    #     bins_above_pedestal = bins[bins >= centroid + peak_distance]
-    #     next_peak = bins_above_pedestal[np.argmax(qs_light_above_pedestal)]
-    #     peak_distance = next_peak - centroid
-
     peaks, peak_locs, amplitudes = guess_peaks_no_width(n, bins, 4, peak_distance)
 
+    # TODO:
+    # Need some logic here to handle cases when there is high AP and only 2 distinguishable peaks
     if len(peaks) == 2:
         max_peaks = 2
     else:
         max_peaks = 3
-    # max_peaks = 3
-    # #     max_peaks = 2 # Used if there aren't enough peaks as in the case of dark LN data sometimes due to signal degradation from afterpulsing
+
+    if temperature == "LN":
+        max_peaks = 2  # Used if there aren't enough peaks as in the case of dark LN data sometimes due to signal degradation from afterpulsing
 
     peaks = peaks[:max_peaks]
     peak_locs = peak_locs[:max_peaks]
@@ -548,9 +573,52 @@ def calculate_gain(
     axs[2, 0].set_ylabel("Counts")
     axs[2, 0].set_yscale("log")
 
-    gauss_params, gauss_errors = fit_peaks_no_sigma_guess(
-        n, bins, peaks, peak_locs, amplitudes, fit_width=fit_width
-    )
+    if len(peaks) > 1:
+        # If the found fit width is too small, there might be fit convergence errors
+        # So try finding FWHM of the second peak
+        FWQM_2nd_peak = 0
+
+        for i in range(int(peaks[1]), len(n) - 1):
+            if n[i] >= 3 * amplitudes[1] / 4 > n[i + 1]:
+                FWQM_2nd_peak = 2 * (i - peaks[1])
+            else:
+                pass
+
+        if fit_width <= 0.000001 * FWQM_2nd_peak:
+            fit_width = FWQM_2nd_peak
+
+        if fit_width <= 10:
+            fit_width = (peaks[1] - peaks[0]) // 3
+
+        try:
+            gauss_params, gauss_errors = fit_peaks_no_sigma_guess(
+                n, bins, peaks, peak_locs, amplitudes, fit_width=fit_width
+            )
+        except:
+            raise ValueError(
+                f"{bias}, {device_name}, {peak_locs}, {fit_width}, failing, could try {FWQM_2nd_peak}"
+            )
+
+    # Logic if there is only one peak -- look 5 sigma beyond one peak and then take the median value as peak 2?
+    else:
+        gauss_params, gauss_errors = fit_peaks_no_sigma_guess(
+            n, bins, peaks, peak_locs, amplitudes, fit_width=fit_width
+        )
+        peak_locs = np.append(peak_locs, np.median(bins[bins > peak_distance]))
+        peaks = np.append(peaks, np.argmin(np.abs(bins - peak_locs[1])))
+        amplitudes = np.append(amplitudes, n[peaks[1]])
+
+        gauss_params.append(
+            [amplitudes[1], peaks[1], np.std(bins[bins > peak_distance])]
+        )
+        gauss_errors.append(
+            [
+                np.sqrt(amplitudes[1]),
+                np.sqrt(peaks[1]),
+                np.std(bins[bins > peak_distance]),
+            ]
+        )
+
     x = np.linspace(bins[0], bins[-1], NBINS)
 
     for i, params in enumerate(gauss_params):
@@ -605,7 +673,7 @@ def calculate_gain(
     slope_gain = slope_fit_gain(centroid)
     print(slope_gain / 1e6)
 
-    if max_peaks == 2:
+    if max_peaks == 2:  # NOTE: this assumes that the first peak is the pedestal peak!
         plt.clf()
         axs[2, 2].hist(
             (qs_light - centroid[0]) / (my_gainer[0]) / e_charge,
@@ -623,7 +691,6 @@ def calculate_gain(
 
 
 def calculate_photons(
-    out_path: str,
     bias: float,
     device_name: str,
     qs_light: list,
@@ -638,6 +705,11 @@ def calculate_photons(
     """
     Parameters
     ----------
+    bias
+        The bias the SiPM was set at during the run
+    device_name
+        The name of the device this file corresponds to, one of:
+        `sipm`, `sipm_1st`, `sipm_1st_low_gain`, or `apd`
     qs_light
         Array of integrated waveforms during the light trigger
     qs_dark
@@ -769,3 +841,122 @@ def zero_crosser(w_in, t_start_in):
             t_trig_times_out = i
             break
     return t_trig_times_out
+
+
+def bi_level_zero_crossing_time_points(
+    w_in: np.ndarray,
+    a_pos_threshold_in: float,
+    a_neg_threshold_in: float,
+    gate_time_in: int,
+    t_start_in: int,
+    n_crossings_out: np.array,
+    polarity_out: np.array,
+    t_trig_times_out: np.array,
+) -> None:
+    """
+    Find the indices where a waveform value crosses 0 after crossing the threshold and reaching the next threshold within some gate time.
+    Works on positive and negative polarity waveforms.
+    Useful for finding pileup events with the RC-CR^2 filter.
+
+    Parameters
+    ----------
+    w_in
+        the input waveform.
+    a_pos_threshold_in
+        the positive threshold value.
+    a_neg_threshold_in
+        the negative threshold value.
+    gate_time_in
+        The number of samples that the next threshold crossing has to be within in order to count a 0 crossing
+    t_start_in
+        the starting index.
+    n_crossings_out
+        the number of zero-crossings found. Note: if there are more zeros than elements in output arrays, this will continue to increment but the polarity and trigger time will not be added to the output buffers
+    polarity_out
+        An array holding the polarity of identified pulses. 0 for negative and 1 for positive
+    t_trig_times_out
+        the indices where the waveform value has crossed the threshold and returned to 0.
+        Arrays of fixed length (padded with :any:`numpy.nan`) that hold the
+        indices of the identified trigger times.
+
+    JSON Configuration Example
+    --------------------------
+
+    .. code-block :: json
+
+        "trig_times_out": {
+            "function": "multi_trigger_time",
+            "module": "dspeed.processors",
+            "args": ["wf_rc_cr2", "5", "-10", 0, "n_crossings", "polarity_out(20, vector_len=n_crossings)", "trig_times_out(20, vector_len=n_crossings)"],
+            "unit": "ns"
+        }
+    """
+    # prepare output
+    t_trig_times_out[:] = np.nan
+    polarity_out[:] = np.nan
+
+    # Check everything is ok
+    if (
+        np.isnan(w_in).any()
+        or np.isnan(a_pos_threshold_in)
+        or np.isnan(a_neg_threshold_in)
+        or np.isnan(t_start_in)
+    ):
+        return
+
+    if np.floor(t_start_in) != t_start_in:
+        raise ValueError("The starting index must be an integer")
+
+    if int(t_start_in) < 0 or int(t_start_in) >= len(w_in):
+        raise ValueError("The starting index is out of range")
+
+    if len(polarity_out) != len(t_trig_times_out):
+        raise ValueError("The output arrays are of different lengths.")
+
+    gate_time_in = int(gate_time_in)  # make sure this is an integer!
+    # Perform the processing
+    is_above_thresh = False
+    is_below_thresh = False
+    crossed_zero = False
+    n_crossings_out[0] = 0
+    for i in range(int(t_start_in), len(w_in) - 1, 1):
+        if is_below_thresh and (w_in[i] <= 0 < w_in[i + 1]):
+            crossed_zero = True
+            neg_trig_time_candidate = i
+
+        # Either we go above threshold
+        if w_in[i] <= a_pos_threshold_in < w_in[i + 1]:
+            if crossed_zero and is_below_thresh:
+                if i - is_below_thresh < gate_time_in:
+                    if n_crossings_out[0] < len(polarity_out):
+                        t_trig_times_out[n_crossings_out[0]] = neg_trig_time_candidate
+                        polarity_out[n_crossings_out[0]] = 0
+                    n_crossings_out[0] += 1
+                else:
+                    is_above_thresh = i
+
+                is_below_thresh = False
+                crossed_zero = False
+            else:
+                is_above_thresh = i
+
+        if is_above_thresh and (w_in[i] >= 0 > w_in[i + 1]):
+            crossed_zero = True
+            pos_trig_time_candidate = i
+
+        # Or we go below threshold
+        if w_in[i] >= a_neg_threshold_in > w_in[i + 1]:
+            if crossed_zero and is_above_thresh:
+                if i - is_above_thresh < gate_time_in:
+                    if n_crossings_out[0] < len(polarity_out):
+                        t_trig_times_out[n_crossings_out[0]] = pos_trig_time_candidate
+                        polarity_out[n_crossings_out[0]] = 1
+                    n_crossings_out[0] += 1
+                else:
+                    is_below_thresh = i
+                is_above_thresh = False
+                crossed_zero = False
+            else:
+                is_below_thresh = i
+
+    return polarity_out, t_trig_times_out

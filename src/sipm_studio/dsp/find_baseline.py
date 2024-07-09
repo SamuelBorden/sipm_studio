@@ -49,22 +49,32 @@ def find_bl(wfs_in: np.array, bl_idx: int) -> np.array:
     # Find the slope of the first bl_idx samples
     bl_slopes = []
     bl_intercepts = []
+    bl_stds = []
 
     for wf in wfs_in:
         slope, intercept, *_ = linregress(np.arange(0, bl_idx), wf[:bl_idx])
         bl_slopes.append(slope)
         bl_intercepts.append(intercept)
+        bl_stds.append(np.std(wf[:bl_idx]))
 
     bl_slopes = np.array(bl_slopes)
     bl_intercepts = np.array(bl_intercepts)
-    n, bins, _ = plt.hist(bl_slopes, bins=200)
+    bl_std = np.abs(np.mean(bl_stds))
+    n, bins, _ = plt.hist(bl_slopes, bins=500, range=(-bl_std / 4, bl_std / 4))
     plt.clf()
 
     peak, sigma = tallest_peak_loc_sigma(bins, n)
     peaks = np.array([np.argmax(n)])
     peak_locs = np.array([peak])
     amplitudes = np.array([np.amax(n)])
+
     sigma = int(sigma / (bins[1] - bins[0]))  # convert to units of bins
+
+    if len(amplitudes) < 1:
+        raise ValueError(f"{len(amplitudes)} length")
+    if sigma <= 5:  # make sure sigma is larger than the number of free parameters
+        sigma = 6
+    #         raise ValueError(f'{sigma}, {amplitudes}, {peaks}, {peak_locs} in baseline first pass failing')
 
     gauss_params, gauss_errors = fit_peak(
         n, bins, peaks, peak_locs, amplitudes, fit_width=sigma
@@ -93,7 +103,7 @@ def find_bl(wfs_in: np.array, bl_idx: int) -> np.array:
         (bl_slopes <= avg_slope + std_cut * slope_std)
         & (bl_slopes >= avg_slope - std_cut * slope_std)
     ]
-    n, bins, _ = plt.hist(bl_values, bins=200)
+    n, bins, _ = plt.hist(bl_values, bins=500)
     plt.clf()
 
     # guess and fit the baseline peak
@@ -101,11 +111,19 @@ def find_bl(wfs_in: np.array, bl_idx: int) -> np.array:
     peaks = np.array([np.argmax(n)])
     peak_locs = np.array([peak])
     amplitudes = np.array([np.amax(n)])
-    sigma = int(sigma / (bins[1] - bins[0]))  # convert to units of bins
+    sigma_int = int(sigma / (bins[1] - bins[0]))  # convert to units of bins
 
-    gauss_params, gauss_errors = fit_peak(
-        n, bins, peaks, peak_locs, amplitudes, fit_width=sigma
-    )
+    if len(amplitudes) < 1:
+        raise ValueError(f"{len(amplitudes)} length")
+
+    if sigma_int > 5:
+        gauss_params, gauss_errors = fit_peak(
+            n, bins, peaks, peak_locs, amplitudes, fit_width=sigma_int
+        )
+    elif (
+        sigma_int <= 5
+    ):  # make sure sigma is larger than the number of free parameters, otherwise use the central value
+        gauss_params = [[amplitudes[0], peak, sigma]]
 
     x = np.linspace(bins[0], bins[-1], 500)
 
