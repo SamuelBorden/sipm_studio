@@ -876,7 +876,7 @@ def bi_level_zero_crossing_time_points(
         An array holding the polarity of identified pulses. 0 for negative and 1 for positive
     t_trig_times_out
         the indices where the waveform value has crossed the threshold and returned to 0.
-        Arrays of fixed length (padded with :any:`numpy.nan`) that hold the
+        Arrays of fixed length (padded with `numpy.nan`) that hold the
         indices of the identified trigger times.
 
     JSON Configuration Example
@@ -887,7 +887,7 @@ def bi_level_zero_crossing_time_points(
         "trig_times_out": {
             "function": "multi_trigger_time",
             "module": "dspeed.processors",
-            "args": ["wf_rc_cr2", "5", "-10", 0, "n_crossings", "polarity_out(20, vector_len=n_crossings)", "trig_times_out(20, vector_len=n_crossings)"],
+            "args": ["wf_rc_cr2", "5", "-10", 0, "n_crossings", "polarity_out(20)", "trig_times_out(20)"],
             "unit": "ns"
         }
     """
