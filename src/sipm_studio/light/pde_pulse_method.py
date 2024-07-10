@@ -57,6 +57,7 @@ e_charge = 1.6e-19
 
 NUM_SIGMA_AWAY = 5
 GAUSSIAN_FILTERED_QPE_THRESHOLD = 1
+GAUSSIAN_FILTERED_QPE_THRESHOLD = 0.2
 
 SAVE_SUPERPULSE = False
 
@@ -271,15 +272,10 @@ def calculate_pulse_pde(
     dark_pedestal_fit_width = 2 * (offset_idx - dark_max_idx)
     dark_peak_distance = int(np.mean(np.diff(trig)))
 
-    # Try finding the tallest peak and fitting it so as to seed eventual fit parameters for the whole charge spectrum
+    # For dark data, the tallest peak should always be the pedestal. Use that location as a guess for the peak of the light
+    # spectrum as well. Then fit the pedestal peaks to get a better
     # ----------------------------------------------------------------------------------------------------------------------------
     try:
-        peak, sigma = tallest_peak_loc_sigma(bins, n)
-        peaks = np.array([np.argmax(n)])
-        peak_locs = np.array([peak])
-        amplitudes = np.array([np.amax(n)])
-        sigma = int(sigma / (bins[1] - bins[0]))  # convert to units of bins
-        print("Found light peaks")
 
         peak_dark, sigma_dark = tallest_peak_loc_sigma(bins_dark, n_dark)
         peaks_dark = np.array([np.argmax(n_dark)])
@@ -288,6 +284,14 @@ def calculate_pulse_pde(
         sigma_dark = int(
             sigma_dark / (bins_dark[1] - bins_dark[0])
         )  # convert to units of bins
+
+        # US
+        peak, sigma = tallest_peak_loc_sigma(bins, n)
+        peaks = np.array([np.argmin(abs(bins - peak_locs_dark[0]))])
+        peak_locs = peak_locs_dark
+        amplitudes = np.array([n[peaks[0]]])
+        sigma = int(sigma / (bins[1] - bins[0]))  # convert to units of bins
+        print("Found light peaks")
 
     except:
         raise ValueError(f"Peak Finding failed {bias}, {device_name}")
