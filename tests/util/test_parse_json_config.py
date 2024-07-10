@@ -216,6 +216,7 @@ def test_parse_pde_json_config(tmp_path):
         {
             "input_path": f"{d}",
             "output_path": f"{d}",
+            "temperature": "LN",
             "output_file_name": "pde_test.h5",
             "led_wavelength": 560,
             "input_files": [
@@ -240,12 +241,13 @@ def test_parse_pde_json_config(tmp_path):
     out_array = parse_pde_json(f"{str(d)}/process_raw.json")[0]
 
     assert out_array[0] == f"{f}"
-    assert out_array[1] == 0.2457870367786596
-    assert out_array[2] == 54.5
-    assert out_array[3] == "sipm"
-    assert out_array[4] == 0.5
-    assert out_array[5] == 10
-    assert out_array[6] == 100
-    assert out_array[7] == 11
-    assert out_array[8] == 101
-    assert out_array[9] == f"{output_name}"
+    assert out_array[1] == "LN"
+    assert out_array[2] == 0.2457870367786596
+    assert out_array[3] == 54.5
+    assert out_array[4] == "sipm"
+    assert out_array[5] == 0.5
+    assert out_array[6] == 10
+    assert out_array[7] == 100
+    assert out_array[8] == 11
+    assert out_array[9] == 101
+    assert out_array[10] == f"{output_name}"

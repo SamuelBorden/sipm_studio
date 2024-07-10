@@ -116,9 +116,7 @@ def test_build_raw(tmp_path):
     assert energies[0] == 798
     assert np.allclose(waveforms[0][:5], np.array([2745, 2742, 2745, 2746, 2745]), 1e-6)
     assert np.allclose(
-        bls[0][:5],
-        np.array(
-            [2736.86041856, 2737.81281246, 2738.75816431, 2739.69648967, 2740.62780407]
-        ),
+        bls[:5],
+        np.array([2744.8, 3078.8, 2745.0, 3036.8, 2745.5]),
         1e-6,
     )
